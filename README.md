@@ -2,6 +2,11 @@
 
 Caskara is a high-performance, ACID-compliant NoSQL-style data engine built specifically for Hytale modding. It combines the extreme durability of **SQLite** with the flexibility of **JSON-based NoSQL**, providing a "plug-and-play" experience with professional features like transactions, encryption, and real-time observability.
 
+> [!WARNING]
+> **BETA RELEASE**: Caskara is currently in Beta. While it has undergone extensive testing, it may still contain undiscovered bugs or inconsistencies. Please report any issues you find.
+
+📖 **[Read the Full API Documentation (API.md)](API.md)**
+
 ---
 
 ## � Architecture Overview
