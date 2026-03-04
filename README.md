@@ -1,159 +1,167 @@
-# 🐚 Caskara - Banco de Dados Simples para Hytale
+# Caskara: The Professional Data Engine for Hytale
 
-**Caskara** é uma API de banco de dados versátil e fácil de usar, feita para que você possa focar no seu mod e não em como salvar os dados.
-
-## 🚀 Como começar (O jeito fácil)
-
-### 1. Inicializar
-No seu `setup()` do plugin:
-```java
-Caskara.init(new File("mods/Caskara/data"));
-```
-
-### 2. Guia Completo de CRUD (O Básico)
-
-Aqui estão exemplos prontos para você gerenciar seus dados:
-
-```java
-// --- CREATE / UPDATE (Criar ou Atualizar) ---
-User novo = new User("Cookie", 25);
-Caskara.save("user_1", novo); 
-
-// ⚠️ IMPORTANTE: O ID funciona como uma Chave Primária.
-// Se você salvar outro objeto com o MESMO ID, ele SOBRESCREVE o anterior.
-User novo2 = new User("Cookie2", 20);
-Caskara.save("user_1", novo2); // Agora o registro "user_1" contém o Cookie2.
-
-// --- READ (Ler) ---
-User carregado = Caskara.load("user_1", User.class);
-if (carregado != null) {
-    System.out.println("Nome: " + carregado.getName());
-}
-
-// --- DELETE (Deletar) ---
-Caskara.delete("user_1", User.class);
-
-// --- LIST (Listar todos) ---
-List<User> todos = Caskara.list(User.class);
-```
+Caskara is a high-performance, ACID-compliant NoSQL-style data engine built specifically for Hytale modding. It combines the extreme durability of **SQLite** with the flexibility of **JSON-based NoSQL**, providing a "plug-and-play" experience with professional features like transactions, encryption, and real-time observability.
 
 ---
 
-## � Como trabalhar com Listas?
+## � Architecture Overview
 
-Existem duas formas principais de lidar com listas no Caskara, dependendo do que você precisa:
+Caskara uses a unique **Shell & Core** architecture to manage data. Every database file is a "Shell", and every entity type within that shell is a "Core".
 
-### 1. Registros Individuais (O jeito padrão)
-Se você quer uma lista de "todos os usuários do servidor", salve cada um com um **ID único**. Depois, use o `list()` para puxar todos.
-
-```java
-// Registrar usuários com IDs diferentes
-Caskara.save("player_uuid_1", user1);
-Caskara.save("player_uuid_2", user2);
-
-// Puxar a lista completa depois
-List<User> todosOsPlayers = Caskara.list(User.class);
-```
-
-### 2. Lista dentro de um Objeto (Documento)
-Se você quer uma lista específica (ex: "Membros de uma Guilda" ou "Itens de uma Mochila"), crie uma classe que **contém** uma lista.
-
-```java
-public class Guild {
-    private String name;
-    private List<String> memberUuids = new ArrayList<>();
+```mermaid
+graph TD
+    A[Plugin Code] --> B[Caskara API]
+    B --> C{Shell Controller}
+    C --> D[Shell: global.db]
+    C --> E[Shell: players.db]
+    D --> F[Core: Quests]
+    D --> G[Core: Factions]
+    E --> H[Core: PlayerStats]
     
-    public void addMember(String uuid) { memberUuids.add(uuid); }
-}
-
-// Salva a guilda inteira (com a lista dentro)
-Caskara.save("guild_id_abc", minhaGuilda);
+    subgraph "Internal Processing"
+    I[LRU Cache] <--> J[JSON Serializer]
+    J <--> K[AES-256 Encryption]
+    K <--> L[SQLite Storage]
+    end
+    
+    F --> I
+    G --> I
+    H --> I
 ```
 
 ---
 
-## �💡 Esqueça as Colunas: Sua Classe é o Esquema
+## 🏁 Beginner's Guide: Basic CRUD
 
-No Caskara, você **não cria tabelas ou colunas** manualmente. A estrutura do banco de dados é definida automaticamente pelas variáveis da sua classe Java.
+Managing data with Caskara is intentionally simple. You don't need to write SQL or define schemas.
 
-### Exemplo: Como criar uma "Lista de Frutas"?
+### 1. Model your data
+Any Java class with a default constructor can be a Caskara entity.
+```java
+public class Quest {
+    public String id; // Automatically synced if named id, uuid, or uid
+    public String title;
+    public boolean completed;
+}
+```
 
-Em bancos tradicionais, você precisaria de uma tabela `fruits` com colunas `name`, `color`, etc. No Caskara, você apenas faz isso:
+### 2. Basic Operations
+```java
+// Save (Create or Update)
+Quest q = new Quest("Fire Dragon", false);
+Caskara.save(q);
+
+// Load (Read)
+Quest loaded = Caskara.load("Fire Dragon", Quest.class);
+
+// List All
+List<Quest> allQuests = Caskara.list(Quest.class);
+
+// Delete (Discard)
+Caskara.delete("Fire Dragon", Quest.class);
+```
+
+---
+
+## 🛡️ Pro Patterns: The "Advanced Data Engine"
+
+Caskara shines when you need professional-grade data integrity.
+
+### ACID Transactions
+Ensure multiple operations either all succeed or all fail. Perfect for economic transfers.
+```java
+Caskara.transaction(tx -> {
+    Wallet p1 = tx.load("uuid1", Wallet.class);
+    Wallet p2 = tx.load("uuid2", Wallet.class);
+    
+    p1.balance -= 100;
+    p2.balance += 100;
+    
+    tx.save(p1);
+    tx.save(p2); // If this throws an exception, p1's balance is ROLLED BACK automatically!
+});
+```
+
+### Hooks & Validation
+Automate logic before or after data is touched.
+```java
+var core = Caskara.core(Player.class);
+
+// Stop bad data from being saved
+core.addValidator(p -> p.level > 0);
+
+// Log activity automatically
+core.onAfterSave((id, p) -> Logger.info("Player " + p.name + " was saved."));
+```
+
+### Object Lifecycle: TTL & Soft Delete
+```java
+// This record will be physically deleted after 30 minutes by a background worker
+Caskara.save(tempBuff, Duration.ofMinutes(30));
+
+// Non-destructive delete. The data stays in DB but is ignored by Queries/Loads.
+Caskara.softDelete("mod-123", ModData.class);
+Caskara.restore("mod-123", ModData.class); // Bring it back!
+```
+
+---
+
+## � Security: Transparent Encryption
+
+Secure sensitive data (like Discord tokens or private keys) with AES-256. Caskara handles encryption and decryption automatically during I/O.
 
 ```java
-// 1. Defina sua classe e seus campos (Suas "Colunas")
-public class FruitBasket {
-    private String name;
-    private List<Fruit> fruits; // Uma lista dentro do objeto!
-}
+// Call this once during initialization
+Caskara.encrypt(SecretConfig.class, "your-super-secret-key");
 
-public class Fruit {
-    public String name;
-    public String color;
-}
-
-// 2. Salve direto. O Caskara cria a estrutura para você.
-Caskara.save("cesta_01", minhaCesta);
+// From now on, SecretConfig data is stored as encrypted blobs in SQLite
+Caskara.save(new SecretConfig("token", "xyz-123"));
 ```
-
-**Por que isso é bom?**
-*   **Rapidez**: Quer adicionar uma "coluna" nova? Basta adicionar um campo `private String preco;` na sua classe Java e pronto!
-*   **Flexibilidade**: Você pode ter listas, mapas e objetos complexos dentro de um único registro.
 
 ---
 
-## 💎 Funcionalidades e Tipos de Dados
+## � Technical Deep Dive
 
-O Caskara suporta dados complexos automaticamente (Listas, Números, Objetos aninhados).
-
-### Exemplo de Dados Diferentes:
-```java
-public class PlayerStats {
-    private String name;            // Texto
-    private int level;              // Número
-    private List<String> inventory; // LISTAS (Trabalha direto com List, Set, Map)
-    private HomeLocation home;      // OBJETOS ANINHADOS
-}
-
-// Salvar é igual:
-Caskara.save("player_1", stats);
-```
-
-### 🧬 Sistema de Versões (Flexibilidade)
-Se você atualizar seu código e adicionar um novo campo (ex: `String email`), o Caskara não vai quebrar.
-- Ao carregar dados antigos que não tinham email, o Java vai receber `null`.
-- Sem erros, sem necessidade de deletar o banco antigo!
-
----
-
-## 🔍 Busca Avançada (Query)
-
-Se quiser buscar por campos específicos dentro do banco:
+### How the JSON Query Engine works
+Caskara uses SQLite's `json_extract` to query data without a fixed schema. When you call `createIndex()`, Caskara generates a **Computed SQL Index** on the JSON property.
 
 ```java
-List<User> resultado = Caskara.core(User.class).query()
-    .field("name", "Cookie") // Busca onde o nome é Cookie
-    .fetch();
+Caskara.createIndex(Player.class, "stats.level");
+
+// Caskara runs this internally for O(1) lookups:
+// CREATE INDEX idx_player_level ON elements(json_extract(json, '$.stats.level'))
 ```
 
----
-
-## 🌍 Escopos (Mundial vs Global)
-
-Por padrão, o Caskara salva tudo na pasta `global`. Se quiser salvar algo específico de um mundo:
-
+### Performance Metrics
+Caskara tracks everything. Access the `Stats` engine to see how your mod is performing:
 ```java
-// Algo que só existe nesse mundo
-var mundoShell = Caskara.shell(world, "database_do_mundo");
-mundoShell.save("id", objeto);
+var stats = Caskara.stats();
+System.out.println("Cache Hit Rate: " + stats.getCacheHitRate() * 100 + "%");
+System.out.println("Avg Latency: " + stats.getAverageQueryTimeMs() + "ms");
 ```
 
 ---
 
-## 📁 Onde ficam os arquivos?
-O Caskara organiza tudo para você:
-- `global/default.db`: Onde as coisas do `Caskara.save()` ficam.
-- `worlds/[mundo]/[nome].db`: Bancos específicos de cada mundo.
+## 📊 Technical Comparison
 
-## 📄 Licença
-Distribuído sob a licença MIT.
+| Feature | Caskara | Raw SQLite | MongoDB |
+| :--- | :---: | :---: | :---: |
+| **NoSQL Flexibility** | ✅ (JSON) | ❌ (Rigid) | ✅ |
+| **ACID Transactions** | ✅ Built-in | ✅ SQL | ✅ |
+| **Transparent Encryption** | ✅ 1-Line | ❌ Complex | ✅ |
+| **In-Memory Caching** | ✅ (LRU) | ❌ | ✅ |
+| **Setup Overhead** | Zero | High | High |
+| **Auto-Indexing** | ✅ | ❌ | ✅ |
+
+---
+
+## 🛑 When NOT to use Caskara
+
+- **Massive BLOB storage**: Do not store large images or videos. Use Hytale's asset system instead.
+- **Relational Complexity**: If your data requires 10+ table joins, use raw SQL.
+- **Global Shared Databases**: For multi-server clusters, use a dedicated external DB.
+
+---
+
+### Developed for the next generation of Hytale Modding.
+"Data management shouldn't be hard. It should be Caskara."

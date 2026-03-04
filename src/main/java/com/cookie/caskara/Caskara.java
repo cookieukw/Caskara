@@ -3,9 +3,14 @@ package com.cookie.caskara;
 import com.cookie.caskara.db.Shell;
 import com.cookie.caskara.db.Core;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.cookie.caskara.db.Stats;
 import java.io.File;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Caskara API - Shell & Core Paradigm.
@@ -56,31 +61,154 @@ public class Caskara {
         return shell().core(clazz);
     }
 
+    // --- PRO STATIC API ---
+
     /**
-     * SIMPLIFIED: Saves an object to the default database.
+     * Saves an object and returns its generated/preserved ID.
      */
-    public static <T> void save(String id, T object) {
-        core((Class<T>) object.getClass()).preserve(id, object);
+    public static <T> String save(String id, T object) {
+        return core((Class<T>) object.getClass()).preserve(id, object);
     }
 
     /**
-     * SIMPLIFIED: Loads an object from the default database.
+     * Saves an object with an automatic UUID.
+     */
+    public static <T> String save(T object) {
+        return core((Class<T>) object.getClass()).preserve(object);
+    }
+
+    /**
+     * Saves an object with a TTL (Time To Live).
+     */
+    public static <T> String save(T object, java.time.Duration ttl) {
+        return core((Class<T>) object.getClass()).preserve(null, object, ttl.toMillis());
+    }
+
+    /**
+     * Saves an object with an automatic UUID and specific TTL.
+     */
+    public static <T> String save(T object, long ttlMillis) {
+        return core((Class<T>) object.getClass()).preserve(null, object, ttlMillis);
+    }
+
+    /**
+     * Saves an object asynchronously with a TTL.
+     */
+    public static <T> CompletableFuture<String> saveAsync(T object, long ttlMillis) {
+        return core((Class<T>) object.getClass()).preserveAsync(null, object, ttlMillis);
+    }
+
+    /**
+     * Marks an object as soft-deleted.
+     */
+    public static <T> void softDelete(String id, Class<T> clazz) {
+        core(clazz).softDelete(id);
+    }
+
+    /**
+     * Restores a soft-deleted object.
+     */
+    public static <T> void restore(String id, Class<T> clazz) {
+        core(clazz).restore(id);
+    }
+
+    /**
+     * Registers a schema migration for a specific class and version.
+     */
+    public static <T> void migration(Class<T> clazz, int version, java.util.function.Function<com.google.gson.JsonObject, com.google.gson.JsonObject> migrator) {
+        core(clazz).registerMigration(version, migrator);
+    }
+
+    /**
+     * Loads an object by ID.
      */
     public static <T> T load(String id, Class<T> clazz) {
         return core(clazz).extract(id).sync().orElse(null);
     }
 
     /**
-     * SIMPLIFIED: Lists all objects of a certain type.
+     * Loads an object by ID asynchronously.
+     */
+    public static <T> CompletableFuture<T> loadAsync(String id, Class<T> clazz) {
+        return core(clazz).extract(id).async().thenApply(opt -> opt.orElse(null));
+    }
+
+    /**
+     * Lists all objects of a certain type.
      */
     public static <T> java.util.List<T> list(Class<T> clazz) {
         return core(clazz).extractAll();
     }
 
     /**
-     * SIMPLIFIED: Deletes an object from the default database.
+     * Deletes an object.
      */
     public static <T> void delete(String id, Class<T> clazz) {
         core(clazz).discard(id);
+    }
+
+    /**
+     * Enables AES-256 encryption for a specific entity type.
+     */
+    public static <T> void encrypt(Class<T> clazz, String securityKey) {
+        core(clazz).setSecurityKey(securityKey);
+    }
+
+    /**
+     * Executes a series of operations within a single SQL transaction on the default shell.
+     */
+    public static void transaction(java.util.function.Consumer<com.cookie.caskara.db.Transaction> action) {
+        shell().transaction(action);
+    }
+
+    /**
+     * Gets performance metrics for the default shell.
+     */
+    public static com.cookie.caskara.db.Stats stats() {
+        return shell().getStats();
+    }
+
+    /**
+     * Creates a high-performance index on a JSON field.
+     */
+    public static <T> void createIndex(Class<T> clazz, String jsonField) {
+        core(clazz).createIndex(jsonField);
+    }
+
+    /**
+     * Enables automatic backups for the default shell.
+     */
+    public static void enableAutoBackup(int intervalMinutes) {
+        new BackupManager(shell(), new File(dataFolder, "backups")).startAutoBackup(intervalMinutes);
+    }
+
+    /**
+     * Exports the default shell data to a JSON file.
+     */
+    public static void exportShell(File file) {
+        shell().exportToJson(file);
+    }
+
+    /**
+     * Imports data from a JSON file into the default shell.
+     */
+    public static void importShell(File file) {
+        shell().importFromJson(file);
+    }
+
+    /**
+     * Utility: Gets the ID from an object (checking id, uuid, uid fields).
+     */
+    public static String getId(Object object) {
+        if (object == null) return null;
+        for (String fName : new String[]{"id", "uuid", "uid"}) {
+            try {
+                java.lang.reflect.Field field = object.getClass().getDeclaredField(fName);
+                field.setAccessible(true);
+                Object val = field.get(object);
+                if (val != null) return val.toString();
+            } catch (Exception ignored) {}
+        }
+        return null;
     }
 }

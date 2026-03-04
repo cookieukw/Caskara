@@ -1,16 +1,20 @@
 package com.cookie.caskara.db;
 
+import com.cookie.caskara.exceptions.DatabaseException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 /**
  * A 'Pearl' represents a single result from a Core.
- * It encapsulates the value and allows for both synchronous and asynchronous access.
+ * Professional version with exception handling and timeouts.
  */
 public class Pearl<T> {
-    private final T value;
     private final CompletableFuture<T> future;
+    private T value;
 
     public Pearl(T value) {
         this.value = value;
@@ -18,19 +22,23 @@ public class Pearl<T> {
     }
 
     public Pearl(CompletableFuture<T> future) {
-        this.value = null; // Value is only available via sync() or async()
         this.future = future;
     }
 
     /**
      * Gets the value synchronously, blocking if necessary.
+     * Thrown DatabaseException if the underlying operation failed.
      */
     public Optional<T> sync() {
+        if (value != null) return Optional.of(value);
         try {
-            return Optional.ofNullable(future.get());
-        } catch (Exception e) {
-            e.printStackTrace();
-            return Optional.empty();
+            // Virtual threads mean blocking is okay, but we use a timeout for safety
+            value = future.get(5, TimeUnit.SECONDS);
+            return Optional.ofNullable(value);
+        } catch (ExecutionException e) {
+            throw new DatabaseException("Operation failed inside Pearl retrieval", e.getCause());
+        } catch (InterruptedException | TimeoutException e) {
+            throw new DatabaseException("Operation timed out or was interrupted", e);
         }
     }
 
@@ -42,12 +50,10 @@ public class Pearl<T> {
     }
 
     /**
-     * Performs an action if the value is present (asynchronously).
+     * Performs an action if the value is present. (Synchronous)
      */
     public void ifFound(Consumer<T> action) {
-        future.thenAccept(val -> {
-            if (val != null) action.accept(val);
-        });
+        sync().ifPresent(action);
     }
 
     /**

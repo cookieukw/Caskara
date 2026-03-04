@@ -1,7 +1,10 @@
 package com.cookie.caskara;
 
+import com.cookie.caskara.db.Core;
+import com.cookie.caskara.entities.User;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import java.io.File;
 
 public class MainPlugin extends JavaPlugin {
     public MainPlugin(JavaPluginInit init) {
@@ -10,50 +13,61 @@ public class MainPlugin extends JavaPlugin {
 
     @Override
     protected void setup() {
-        System.out.println("Caskara has been initialized!");
+        System.out.println("Caskara Advanced Data Engine initialized!");
         
-        // Initialize Caskara API
-        File dataFolder = new File("mods/Caskara/data");
-        Caskara.init(dataFolder);
+        File folder = new File("mods/Caskara/data");
+        Caskara.init(folder);
 
-        // Simple Test
-        testAPI();
+        testAdvancedFeatures();
     }
 
-    private void testAPI() {
-        // 1. O jeito fácil (Estático e Simples)
-        User user1 = new User("Cookie", 25);
-        User user2 = new User("Cookie2", 20);
-        
-        Caskara.save("user_1", user1);
-        Caskara.save("user_2", user2);
-        
-        User carregado = Caskara.load("user_1", User.class);
-        System.out.println("[Caskara] Usuário 1 carregado: " + carregado.getName());
+    private void testAdvancedFeatures() {
+        // 1. Reactive Real-time Monitoring
+        Caskara.core(PlayerData.class).observeAll((id, data) -> {
+            System.out.println("[Caskara Observer] Data changed for " + id + ": " + data.getName());
+        });
 
-        // 2. Exemplo com Dados Complexos (Listas e Objetos)
-        var stats = new PlayerStats("CookiePlayer", 10, 100.0);
-        stats.addItem("Espada de Madeira");
-        stats.addItem("Poção de Cura");
-        stats.setLocation(100, 64, -200);
+        // 2. Premium Security (AES-256)
+        Caskara.encrypt(PlayerData.class, "hytale-secure-key-123");
 
-        Caskara.save("stats_cookie", stats);
+        // 3. ACID Transactions (Batch Operations)
+        Caskara.transaction(tx -> {
+            PlayerData p1 = new PlayerData("Cookie", 1000);
+            PlayerData p2 = new PlayerData("Antigravity", 500);
+            
+            tx.save("player_1", p1);
+            tx.save("player_2", p2);
+            
+            System.out.println("[Caskara] Transaction: Atomically saved two players.");
+        });
 
-        var statsCarregados = Caskara.load("stats_cookie", PlayerStats.class);
-        System.out.println("[Caskara] Stats com Lista: " + statsCarregados.getInventory());
+        // 4. Advanced Engine: paginated query with operators
+        List<PlayerData> richPlayers = Caskara.query(PlayerData.class)
+                .fieldGreaterThan("balance", 100)
+                .fieldContains("name", "o")
+                .orderBy("balance", com.cookie.caskara.db.Query.Order.DESC)
+                .page(1, 10)
+                .fetch();
 
-        // 3. Exemplo de "Lista de Frutas" (Resolvendo a dúvida das Colunas)
-        var cesta = new FruitBasket("Minha Cesta");
-        cesta.addFruit("Maçã", "Vermelha", 0.2);
-        cesta.addFruit("Banana", "Amarela", 0.15);
-        
-        Caskara.save("cesta_1", cesta);
+        System.out.println("[Caskara] Query Results: Found " + richPlayers.size() + " wealthy players.");
 
-        var cestaCarregada = Caskara.load("cesta_1", FruitBasket.class);
-        System.out.println("[Caskara] Frutas na cesta: " + cestaCarregada.getFruits());
+        // 5. Technical Observability
+        var stats = Caskara.stats();
+        System.out.println("--- Caskara Metrics ---");
+        System.out.println("Cache Hit Rate: " + (stats.getCacheHitRate() * 100) + "%");
+        System.out.println("Avg Query Latency: " + stats.getAverageQueryTimeMs() + "ms");
+    }
 
-        // 4. Listar todos de um tipo
-        var todosUsuarios = Caskara.list(User.class);
-        System.out.println("[Caskara] Total de usuários no banco: " + todosUsuarios.size());
+    public static class PlayerData {
+        private String id;
+        private String name;
+        private int balance;
+
+        public PlayerData() {}
+        public PlayerData(String name, int balance) {
+            this.name = name;
+            this.balance = balance;
+        }
+        public String getName() { return name; }
     }
 }
