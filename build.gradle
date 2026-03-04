@@ -32,6 +32,10 @@ sourceSets {
     }
 }
 
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.google.code.gson:gson:2.10.1'
