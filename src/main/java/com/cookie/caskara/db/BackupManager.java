@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
  * Manages automatic backups for Caskara Shells.
  */
 public class BackupManager {
-    private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final Shell shell;
     private final File backupFolder;
 
@@ -37,10 +37,12 @@ public class BackupManager {
     public void performBackup() {
         shell.runInLock(() -> {
             File source = shell.getFile();
-            File destination = new File(backupFolder, source.getName() + ".bak");
+            String timestamp = java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            File destination = new File(backupFolder, source.getName() + "." + timestamp + ".bak");
             try {
                 Files.copy(source.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                System.out.println("[Caskara] Backup created for: " + source.getName());
+                System.out.println("[Caskara] Backup created: " + destination.getName());
             } catch (IOException e) {
                 System.err.println("[Caskara] Failed to create backup: " + e.getMessage());
             }

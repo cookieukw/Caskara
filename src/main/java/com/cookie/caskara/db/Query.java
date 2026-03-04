@@ -130,42 +130,39 @@ public class Query<T> {
         try {
             return shell.runInLock(() -> {
                 List<T> results = new ArrayList<>();
-                StringBuilder sql = new StringBuilder("SELECT json FROM elements WHERE type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)");
-            if (filter.length() > 0) {
-                sql.append(" AND ").append(filter);
-            }
+                StringBuilder sql = new StringBuilder(
+                    "SELECT json FROM elements WHERE type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)");
 
-            if (orderByField != null) {
-                sql.append(" ORDER BY json_extract(json, '$.' || ?) ").append(orderDirection.name());
-            }
-
-            if (limit != null) {
-                sql.append(" LIMIT ").append(limit);
-            }
-            if (offset != null) {
-                sql.append(" OFFSET ").append(offset);
-            }
-
-            try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql.toString())) {
-                int paramIndex = 1;
-                pstmt.setString(paramIndex++, typeName);
-                pstmt.setLong(paramIndex++, System.currentTimeMillis());
-                
-                // Add filter params
-                for (Object param : params) {
-                    pstmt.setObject(paramIndex++, param);
+                if (filter.length() > 0) {
+                    sql.append(" AND ").append(filter);
                 }
-
-                // Add order by param
                 if (orderByField != null) {
-                    pstmt.setString(paramIndex++, orderByField);
+                    sql.append(" ORDER BY json_extract(json, '$.' || ?) ").append(orderDirection.name());
+                }
+                if (limit != null) {
+                    sql.append(" LIMIT ").append(limit);
+                }
+                if (offset != null) {
+                    sql.append(" OFFSET ").append(offset);
                 }
 
-                try (ResultSet rs = pstmt.executeQuery()) {
-                    while (rs.next()) {
-                        results.add(Core.getGson().fromJson(rs.getString("json"), clazz));
+                try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql.toString())) {
+                    int paramIndex = 1;
+                    pstmt.setString(paramIndex++, typeName);
+                    pstmt.setLong(paramIndex++, System.currentTimeMillis());
+
+                    for (Object param : params) {
+                        pstmt.setObject(paramIndex++, param);
                     }
-                }
+                    if (orderByField != null) {
+                        pstmt.setString(paramIndex++, orderByField);
+                    }
+
+                    try (ResultSet rs = pstmt.executeQuery()) {
+                        while (rs.next()) {
+                            results.add(Core.getGson().fromJson(rs.getString("json"), clazz));
+                        }
+                    }
                 } catch (SQLException e) {
                     throw new DatabaseException("Failed to fetch query results", e);
                 }

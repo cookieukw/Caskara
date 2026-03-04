@@ -1,10 +1,9 @@
 package com.cookie.caskara;
 
-import com.cookie.caskara.db.Core;
-import com.cookie.caskara.entities.User;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import java.io.File;
+import java.util.List;
 
 public class MainPlugin extends JavaPlugin {
     public MainPlugin(JavaPluginInit init) {

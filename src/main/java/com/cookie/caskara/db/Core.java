@@ -346,20 +346,18 @@ public class Core<T> {
         String finalJson = GSON.toJson(jsonObject);
         if (changed) {
             final int newVersion = schemaVersion;
-            shell.runInLock(() -> {
-                try {
-                    String sql = "UPDATE elements SET json = ?, version = ? WHERE id = ? AND type = ?";
-                    try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
-                        pstmt.setString(1, finalJson);
-                        pstmt.setInt(2, newVersion);
-                        pstmt.setString(3, id);
-                        pstmt.setString(4, typeName);
-                        pstmt.executeUpdate();
-                    }
-                } catch (SQLException ignored) {
+            // Use getConnection() directly — we are already inside a runInLock context
+            try {
+                String sql = "UPDATE elements SET json = ?, version = ? WHERE id = ? AND type = ?";
+                try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
+                    pstmt.setString(1, finalJson);
+                    pstmt.setInt(2, newVersion);
+                    pstmt.setString(3, id);
+                    pstmt.setString(4, typeName);
+                    pstmt.executeUpdate();
                 }
-                return null;
-            });
+            } catch (SQLException ignored) {
+            }
         }
 
         T obj = GSON.fromJson(finalJson, clazz);
@@ -412,12 +410,14 @@ public class Core<T> {
      * Injects the ID into fields named 'id', 'uuid', or 'uid' using reflection.
      */
     private void syncId(String id, T element) {
-        if (element == null) return;
+        if (element == null || id == null) return;
         for (String fName : new String[]{"id", "uuid", "uid"}) {
             try {
                 Field field = clazz.getDeclaredField(fName);
                 field.setAccessible(true);
-                if (field.get(element) == null) {
+                Object current = field.get(element);
+                // Inject the DB id if the field is null OR empty string
+                if (current == null || (current instanceof String && ((String) current).isEmpty())) {
                     field.set(element, id);
                 }
             } catch (NoSuchFieldException ignored) {

@@ -1,8 +1,8 @@
-package com.cookie.caskara.db;
-
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
@@ -73,17 +73,20 @@ public class Shell {
     }
 
     public Connection getConnection() {
-        lock.lock();
+        // ReentrantLock is reentrant — safe to call from locked contexts.
+        // We avoid calling lock.lock() here again to keep the logic simple.
+        // Connection validity is checked lazily.
+        if (connection == null) {
+            initConnection();
+        }
         try {
-            if (connection == null || connection.isClosed()) {
+            if (connection.isClosed()) {
                 initConnection();
             }
-            return connection;
         } catch (SQLException e) {
-            throw new DatabaseException("Failed to get or verify connection", e);
-        } finally {
-            lock.unlock();
+            throw new DatabaseException("Failed to verify connection state", e);
         }
+        return connection;
     }
 
     /**
@@ -178,9 +181,10 @@ public class Shell {
             try {
                 String content = java.nio.file.Files.readString(file.toPath());
                 java.util.List<java.util.Map<String, String>> data = Core.getGson().fromJson(content, java.util.List.class);
-                
-                String sql = "INSERT OR REPLACE INTO elements (id, type, json) VALUES (?, ?, ?)";
-                try (java.sql.PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
+
+                // Insert with version=1 so that migrations can be applied on next read
+                String sql = "INSERT OR REPLACE INTO elements (id, type, json, version) VALUES (?, ?, ?, 1)";
+                try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
                     for (java.util.Map<String, String> row : data) {
                         pstmt.setString(1, row.get("id"));
                         pstmt.setString(2, row.get("type"));
