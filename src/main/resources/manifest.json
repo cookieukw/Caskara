@@ -1,0 +1,14 @@
+{
+    "Group": "Cookieukw",
+    "Name": "Caskara",
+    "Version": "1.0.0",
+    "Description": "A database API for Hytale",
+    "Authors": [
+        {
+            "Name": "cookieukw"
+        }
+    ],
+    "ServerVersion": "*",
+    "DisabledByDefault": false,
+    "Main": "com.cookie.caskara.MainPlugin"
+}
