@@ -1,3 +1,7 @@
+package com.cookie.caskara.db;
+
+import com.cookie.caskara.exceptions.DatabaseException;
+import com.google.gson.Gson;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -10,7 +14,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReentrantLock;
-import com.cookie.caskara.exceptions.DatabaseException;
+
 
 /**
  * A 'Shell' represents a database file/connection.
@@ -18,6 +22,7 @@ import com.cookie.caskara.exceptions.DatabaseException;
  * Thread-safe via ReentrantLock.
  */
 public class Shell {
+    private static final Gson GSON = new Gson();
     private final File shellFile;
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final ReentrantLock lock = new ReentrantLock();
@@ -164,7 +169,7 @@ public class Shell {
                         data.add(row);
                     }
                 }
-                String fullJson = Core.getGson().toJson(data);
+                String fullJson = GSON.toJson(data);
                 java.nio.file.Files.writeString(file.toPath(), fullJson);
             } catch (Exception e) {
                 throw new DatabaseException("Failed to export shell to JSON", e);
@@ -176,11 +181,12 @@ public class Shell {
     /**
      * Imports data from a JSON file into this shell.
      */
+    @SuppressWarnings("unchecked")
     public void importFromJson(File file) {
         runInLock(() -> {
             try {
                 String content = java.nio.file.Files.readString(file.toPath());
-                java.util.List<java.util.Map<String, String>> data = Core.getGson().fromJson(content, java.util.List.class);
+                java.util.List<java.util.Map<String, String>> data = GSON.fromJson(content, java.util.List.class);
 
                 // Insert with version=1 so that migrations can be applied on next read
                 String sql = "INSERT OR REPLACE INTO elements (id, type, json, version) VALUES (?, ?, ?, 1)";

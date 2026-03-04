@@ -14,6 +14,7 @@ public class Transaction {
     /**
      * Preserves an object within this transaction.
      */
+    @SuppressWarnings("unchecked")
     public <T> String save(T object) {
         return shell.core((Class<T>) object.getClass()).preserve(object);
     }
@@ -21,6 +22,7 @@ public class Transaction {
     /**
      * Preserves an object with a specific ID within this transaction.
      */
+    @SuppressWarnings("unchecked")
     public <T> String save(String id, T object) {
         return shell.core((Class<T>) object.getClass()).preserve(id, object);
     }

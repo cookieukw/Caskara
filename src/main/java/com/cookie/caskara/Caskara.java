@@ -1,9 +1,11 @@
 package com.cookie.caskara;
 
-import com.cookie.caskara.db.Shell;
+import com.cookie.caskara.db.BackupManager;
 import com.cookie.caskara.db.Core;
-import com.hypixel.hytale.server.core.universe.world.World;
+import com.cookie.caskara.db.Query;
+import com.cookie.caskara.db.Shell;
 import com.cookie.caskara.db.Stats;
+import com.hypixel.hytale.server.core.universe.world.World;
 import java.io.File;
 import java.time.Duration;
 import java.util.HashMap;
@@ -61,11 +63,19 @@ public class Caskara {
         return shell().core(clazz);
     }
 
+    /**
+     * Returns a fluent Query builder for the given class.
+     */
+    public static <T> com.cookie.caskara.db.Query<T> query(Class<T> clazz) {
+        return core(clazz).query();
+    }
+
     // --- PRO STATIC API ---
 
     /**
      * Saves an object and returns its generated/preserved ID.
      */
+    @SuppressWarnings("unchecked")
     public static <T> String save(String id, T object) {
         return core((Class<T>) object.getClass()).preserve(id, object);
     }
@@ -73,6 +83,7 @@ public class Caskara {
     /**
      * Saves an object with an automatic UUID.
      */
+    @SuppressWarnings("unchecked")
     public static <T> String save(T object) {
         return core((Class<T>) object.getClass()).preserve(object);
     }
@@ -80,6 +91,7 @@ public class Caskara {
     /**
      * Saves an object with a TTL (Time To Live).
      */
+    @SuppressWarnings("unchecked")
     public static <T> String save(T object, java.time.Duration ttl) {
         return core((Class<T>) object.getClass()).preserve(null, object, ttl.toMillis());
     }
@@ -87,6 +99,7 @@ public class Caskara {
     /**
      * Saves an object with an automatic UUID and specific TTL.
      */
+    @SuppressWarnings("unchecked")
     public static <T> String save(T object, long ttlMillis) {
         return core((Class<T>) object.getClass()).preserve(null, object, ttlMillis);
     }
@@ -94,6 +107,7 @@ public class Caskara {
     /**
      * Saves an object asynchronously with a TTL.
      */
+    @SuppressWarnings("unchecked")
     public static <T> CompletableFuture<String> saveAsync(T object, long ttlMillis) {
         return core((Class<T>) object.getClass()).preserveAsync(null, object, ttlMillis);
     }
