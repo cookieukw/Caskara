@@ -93,7 +93,7 @@ public class Caskara {
      */
     @SuppressWarnings("unchecked")
     public static <T> String save(T object, java.time.Duration ttl) {
-        return core((Class<T>) object.getClass()).preserve(null, object, ttl.toMillis());
+        return core((Class<T>) object.getClass()).preserve(null, object, System.currentTimeMillis() + ttl.toMillis());
     }
 
     /**

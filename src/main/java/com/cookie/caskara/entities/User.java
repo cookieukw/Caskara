@@ -6,6 +6,8 @@ public class User {
     // New fields added later will be null/0 by default
     private String email; 
 
+    public User() {}
+
     public User(String name, int age) {
         this.name = name;
         this.age = age;

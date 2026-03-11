@@ -14,6 +14,8 @@ public class PlayerStats {
     private List<String> inventory;
     private Location lastLocation;
 
+    public PlayerStats() {}
+
     public PlayerStats(String playerName, int level, double health) {
         this.playerName = playerName;
         this.level = level;

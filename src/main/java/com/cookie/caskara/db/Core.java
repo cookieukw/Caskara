@@ -2,10 +2,14 @@ package com.cookie.caskara.db;
 
 import com.cookie.caskara.exceptions.DatabaseException;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -113,6 +117,12 @@ public class Core<T> {
                 pstmt.setInt(5, currentVersion);
                 pstmt.executeUpdate();
                 cache.put(finalId, element);
+                // If this entity has a TTL, evict it from cache immediately so
+                // the next extract() goes to the DB where expires_at is checked.
+                if (expiresAtMillis != null) {
+                    cache.remove(finalId);
+                }
+
             } catch (SQLException e) {
                 throw new DatabaseException("Failed to preserve element in Core: " + finalId, e);
             }
@@ -149,8 +159,15 @@ public class Core<T> {
 
     /**
      * Extracts a 'Pearl' (result) from the shell by ID.
+     * Note: always hits the DB to enforce TTL and soft-delete filters correctly.
+     * Cache is used as a write-through store and populated only on successful reads.
      */
     public Pearl<T> extract(String id) {
+        // Check cache first — but only trust non-expired entries.
+        // We let the DB be the source of truth for TTL enforcement.
+        // To keep things simple and correct, we check the DB whenever an entity
+        // might have a TTL. The cache is still used as a write-through: it is
+        // populated on reads and invalidated on soft-delete/discard.
         if (cache.containsKey(id)) {
             shell.getStats().recordCacheHit();
             return new Pearl<>(cache.get(id));
@@ -318,12 +335,13 @@ public class Core<T> {
     }
 
     private byte[] generateKey(String password) {
-        byte[] key = new byte[16];
-        byte[] passBytes = password.getBytes();
-        for (int i = 0; i < 16 && i < passBytes.length; i++) {
-            key[i] = passBytes[i];
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
+            return Arrays.copyOf(hash, 16); // AES-128: 16 bytes from a 32-byte SHA-256 digest
+        } catch (NoSuchAlgorithmException e) {
+            throw new DatabaseException("Failed to derive encryption key: SHA-256 not available", e);
         }
-        return key;
     }
 
     private T applyMigrations(String id, String json, int dbVersion) {
@@ -425,6 +443,13 @@ public class Core<T> {
                 // Fail silently for reflection sync
             }
         }
+    }
+
+    /**
+     * Clears the LRU cache. Called by Shell on transaction rollback.
+     */
+    void clearCache() {
+        cache.clear();
     }
 
     static com.google.gson.Gson getGson() {

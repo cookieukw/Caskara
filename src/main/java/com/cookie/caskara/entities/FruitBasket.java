@@ -8,6 +8,10 @@ public class FruitBasket {
     private String basketName;
     private List<Fruit> fruits;
 
+    public FruitBasket() {
+        this.fruits = new java.util.ArrayList<>();
+    }
+
     public FruitBasket(String basketName) {
         this.basketName = basketName;
         this.fruits = new ArrayList<>();

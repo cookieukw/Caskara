@@ -29,6 +29,7 @@ public class Shell {
     private Connection connection;
     private final Map<Class<?>, Core<?>> cores = new HashMap<>();
     private final Stats stats = new Stats();
+    private java.util.concurrent.ScheduledExecutorService cleanupScheduler;
 
     public Shell(File shellFile) {
         this.shellFile = shellFile;
@@ -122,8 +123,11 @@ public class Shell {
             } catch (Exception e) {
                 try {
                     conn.rollback();
+                    // Invalidate all Core caches — in-memory state may reflect
+                    // writes that were just rolled back in the DB.
+                    clearAllCaches();
                 } catch (SQLException rollbackEx) {
-                    // Log or handle rollback failure
+                    System.err.println("[Caskara] Rollback failed: " + rollbackEx.getMessage());
                 }
                 throw new DatabaseException("Transaction failed and was rolled back", e);
             } finally {
@@ -135,6 +139,16 @@ public class Shell {
             lock.unlock();
         }
     }
+
+    /**
+     * Clears all Core caches (used after a transaction rollback to stay in sync with DB).
+     */
+    void clearAllCaches() {
+        for (Core<?> core : cores.values()) {
+            core.clearCache();
+        }
+    }
+
 
     public File getFile() {
         return shellFile;
@@ -207,8 +221,12 @@ public class Shell {
     }
 
     private void startCleanupTask() {
-        java.util.concurrent.ScheduledExecutorService scheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleAtFixedRate(() -> {
+        cleanupScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "caskara-cleanup");
+            t.setDaemon(true);
+            return t;
+        });
+        cleanupScheduler.scheduleAtFixedRate(() -> {
             runInLock(() -> {
                 try (PreparedStatement pstmt = getConnection().prepareStatement(
                         "DELETE FROM elements WHERE expires_at IS NOT NULL AND expires_at < ?")) {
@@ -227,10 +245,13 @@ public class Shell {
      */
     public void close() {
         try {
+            if (cleanupScheduler != null) {
+                cleanupScheduler.shutdownNow();
+            }
+            executor.shutdown();
             if (connection != null && !connection.isClosed()) {
                 connection.close();
             }
-            executor.shutdown();
         } catch (SQLException e) {
             e.printStackTrace();
         }

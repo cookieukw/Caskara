@@ -40,6 +40,15 @@ dependencies {
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.google.code.gson:gson:2.10.1'
     implementation 'org.xerial:sqlite-jdbc:3.45.1.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
 }
 
 // Tarefa de deploy
