@@ -1,11 +1,15 @@
-# Caskara: The Professional Data Engine for Hytale
+# Caskara: A Data Engine for Hytale Mods
 
-Caskara is a high-performance, ACID-compliant NoSQL-style data engine built specifically for Hytale modding. It combines the extreme durability of **SQLite** with the flexibility of **JSON-based NoSQL**, providing a "plug-and-play" experience with professional features like transactions, encryption, and real-time observability.
+Caskara is a data engine built specifically for the modding ecosystem of Hytale. It combines the reliability of SQLite with the flexibility of JSON-style data structures, giving mod developers a fast and practical way to store and manage persistent data.
+
+Instead of relying on external services or complex setup, Caskara runs locally alongside the mod. This makes it easy to integrate while keeping performance stable even when a server is handling large amounts of game events or player data.
 
 > [!WARNING]
 > **BETA RELEASE**: Caskara is currently in Beta. While it has undergone extensive testing, it may still contain undiscovered bugs or inconsistencies. Please report any issues you find.
 
-📖 **[Read the Full API Documentation (API.md)](API.md)**
+📖 **[Read the Full API Documentation](DOCS.md)**
+
+📖 **[Read the Full Technical API](API.md)**
 
 ---
 
