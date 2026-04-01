@@ -20,6 +20,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
+
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.util.function.Predicate;
@@ -321,7 +323,7 @@ public class Core<T> {
         }
     }
 
-    private String decrypt(String data) {
+    public String decrypt(String data) {
         if (securityKey == null) return data;
         try {
             SecretKeySpec secretKeySpec = new SecretKeySpec(generateKey(securityKey), "AES");
@@ -420,8 +422,12 @@ public class Core<T> {
         });
     }
 
+    public boolean isEncrypted() {
+        return securityKey != null;
+    }
+
     public Query<T> query() {
-        return new Query<>(shell, clazz, typeName);
+        return new Query<>(this, shell, clazz, typeName);
     }
 
     /**
@@ -452,7 +458,7 @@ public class Core<T> {
         cache.clear();
     }
 
-    static com.google.gson.Gson getGson() {
+    static Gson getGson() {
         return GSON;
     }
 }

@@ -1,7 +1,16 @@
 plugins {
     id 'java'
     id 'org.jetbrains.gradle.plugin.idea-ext' version '1.3'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
+
+import groovy.json.JsonSlurper
+def manifestFile = file('src/main/resources/manifest.json')
+def manifest = new JsonSlurper().parseText(manifestFile.text)
+
+version = manifest.Version
+group = manifest.Group.toLowerCase() // Hytale uses lowercase groups by convention
+
 
 ext {
     // Tenta ler do local.properties, se não existir usa o padrão Linux
@@ -51,11 +60,14 @@ tasks.named('test') {
     }
 }
 
-// Tarefa de deploy
+// Tarefa de deploy usando o shadowed jar
 tasks.register('deploy', Copy) {
-    dependsOn 'jar'
-    from tasks.jar.archiveFile
+    dependsOn 'shadowJar'
+    from tasks.shadowJar.archiveFile
     into "${hytaleHome}/UserData/Mods"
+    
+    // Opcional: Renomeia para remover o sufixo "-all" se desejar, mas manteremos o padrão
+    // rename { String fileName -> "caskara.jar" }
     
     doFirst {
         if (!file(hytaleHome).exists()) {
@@ -65,8 +77,14 @@ tasks.register('deploy', Copy) {
     }
 }
 
-// Garante que o deploy rode após o jar
-tasks.jar.finalizedBy('deploy')
+// Configuração específica do Shadow para JDBC
+shadowJar {
+    archiveFileName.set("Caskara-${project.version}.jar")
+    mergeServiceFiles() // Crítico para drivers JDBC e outras bibliotecas de serviço
+}
+
+// Garante que o deploy rode após o shadowJar
+tasks.shadowJar.finalizedBy('deploy')
 
 tasks.named("jar") {
     destinationDirectory.set(file("$projectDir/build/libs"))

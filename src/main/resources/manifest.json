@@ -8,7 +8,7 @@
             "Name": "cookieukw"
         }
     ],
-    "ServerVersion": "*",
+    "ServerVersion": "2026.03.26-89796e57b",
     "DisabledByDefault": false,
     "Main": "com.cookie.caskara.MainPlugin"
 }
