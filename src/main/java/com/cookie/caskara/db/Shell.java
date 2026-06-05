@@ -9,11 +9,18 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.nio.file.Files;
 
 
 /**
@@ -29,7 +36,7 @@ public class Shell {
     private Connection connection;
     private final Map<Class<?>, Core<?>> cores = new HashMap<>();
     private final Stats stats = new Stats();
-    private java.util.concurrent.ScheduledExecutorService cleanupScheduler;
+    private ScheduledExecutorService cleanupScheduler;
 
     public Shell(File shellFile) {
         this.shellFile = shellFile;
@@ -43,6 +50,9 @@ public class Shell {
     private void initConnection() {
         lock.lock();
         try {
+            if (connection != null && !connection.isClosed()) {
+                return;
+            }
             Class.forName("org.sqlite.JDBC");
             if (shellFile.getParentFile() != null) {
                 shellFile.getParentFile().mkdirs();
@@ -98,7 +108,7 @@ public class Shell {
     /**
      * Executes an action within the shell's lock to ensure thread safety.
      */
-    public <R> R runInLock(java.util.function.Supplier<R> action) {
+    public <R> R runInLock(Supplier<R> action) {
         lock.lock();
         try {
             return action.get();
@@ -111,7 +121,7 @@ public class Shell {
      * Executes a series of operations within a single SQL transaction.
      * Thread-safe and atomic.
      */
-    public void transaction(java.util.function.Consumer<Transaction> action) {
+    public void transaction(Consumer<Transaction> action) {
         lock.lock();
         try {
             Connection conn = getConnection();
@@ -172,11 +182,11 @@ public class Shell {
     public void exportToJson(File file) {
         runInLock(() -> {
             try {
-                java.util.List<java.util.Map<String, String>> data = new java.util.ArrayList<>();
+                List<Map<String, String>> data = new ArrayList<>();
                 try (Statement stmt = getConnection().createStatement();
                      ResultSet rs = stmt.executeQuery("SELECT * FROM elements")) {
                     while (rs.next()) {
-                        java.util.Map<String, String> row = new java.util.HashMap<>();
+                        Map<String, String> row = new HashMap<>();
                         row.put("id", rs.getString("id"));
                         row.put("type", rs.getString("type"));
                         row.put("json", rs.getString("json"));
@@ -184,7 +194,7 @@ public class Shell {
                     }
                 }
                 String fullJson = GSON.toJson(data);
-                java.nio.file.Files.writeString(file.toPath(), fullJson);
+                Files.writeString(file.toPath(), fullJson);
             } catch (Exception e) {
                 throw new DatabaseException("Failed to export shell to JSON", e);
             }
@@ -199,13 +209,13 @@ public class Shell {
     public void importFromJson(File file) {
         runInLock(() -> {
             try {
-                String content = java.nio.file.Files.readString(file.toPath());
-                java.util.List<java.util.Map<String, String>> data = GSON.fromJson(content, java.util.List.class);
+                String content = Files.readString(file.toPath());
+                List<Map<String, String>> data = GSON.fromJson(content, List.class);
 
                 // Insert with version=1 so that migrations can be applied on next read
                 String sql = "INSERT OR REPLACE INTO elements (id, type, json, version) VALUES (?, ?, ?, 1)";
                 try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
-                    for (java.util.Map<String, String> row : data) {
+                    for (Map<String, String> row : data) {
                         pstmt.setString(1, row.get("id"));
                         pstmt.setString(2, row.get("type"));
                         pstmt.setString(3, row.get("json"));
@@ -221,7 +231,7 @@ public class Shell {
     }
 
     private void startCleanupTask() {
-        cleanupScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+        cleanupScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "caskara-cleanup");
             t.setDaemon(true);
             return t;
@@ -237,7 +247,7 @@ public class Shell {
                 }
                 return null;
             });
-        }, 1, 1, java.util.concurrent.TimeUnit.MINUTES);
+        }, 1, 1, TimeUnit.MINUTES);
     }
 
     /**

@@ -9,7 +9,7 @@ import java.time.format.DateTimeFormatter;
  * Manages automatic backups for Caskara Shells.
  */
 public class BackupManager {
-    private final Shell shell;
+    private final com.cookie.caskara.db.Shell shell;
     private final File backupFolder;
 
     public BackupManager(Shell shell, File backupFolder) {

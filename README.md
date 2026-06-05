@@ -180,6 +180,14 @@ System.out.println("Avg Latency: " + stats.getAverageQueryTimeMs() + "ms");
 - **Relational Complexity**: If your data requires 10+ table joins, use raw SQL.
 - **Global Shared Databases**: For multi-server clusters, use a dedicated external DB.
 
+## Built-in Auto-Backup
+Caskara has a powerful built-in **Auto-Backup System** that automatically backs up all of your databases safely using native SQLite atomic backup APIs. It runs silently in the background every 1 hour.
+- Use `/caskara backup` in-game to trigger an instant global backup.
+- Use `/caskara autobackup <hours>` to change the backup frequency on-the-fly.
+
+> [!WARNING]  
+> **Server Owners**: Although Caskara safely backs up your databases, you should **always** include the `global/` and `worlds/` folders in your own OS-level server backups! A broken hard drive or accidental folder deletion will destroy both your databases and Caskara's automatic `.bak` files. Do your own off-site backups!
+
 ---
 
 ### Developed for the next generation of Hytale Modding.

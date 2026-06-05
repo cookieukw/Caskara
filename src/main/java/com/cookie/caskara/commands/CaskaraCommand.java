@@ -10,6 +10,8 @@ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
+import java.util.List;
+import java.util.Collections;
 
 public class CaskaraCommand extends AbstractCommand {
 
@@ -29,7 +31,7 @@ public class CaskaraCommand extends AbstractCommand {
     protected CompletableFuture<Void> execute(@Nonnull CommandContext ctx) {
         String action = ctx.get(actionArg).toLowerCase();
         String target = ctx.provided(targetArg) ? ctx.get(targetArg) : null;
-        java.util.List<String> responses;
+        List<String> responses;
 
         switch (action) {
             case "stats":
@@ -53,7 +55,7 @@ public class CaskaraCommand extends AbstractCommand {
                 responses = CaskaraAdminLogic.scanPackage(target);
                 break;
             default:
-                responses = java.util.Collections.singletonList("Unknown action: " + action + ". Use: stats, vacuum, dump, scan, backup, or autobackup.");
+                responses = Collections.singletonList("Unknown action: " + action + ". Use: stats, vacuum, dump, scan, backup, or autobackup.");
                 break;
         }
 

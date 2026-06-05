@@ -350,10 +350,8 @@ public class Core<T> {
         shell.runInLock(() -> {
             String indexName = "idx_" + typeName + "_" + jsonField.replace(".", "_");
             String sql = "CREATE INDEX IF NOT EXISTS " + indexName + 
-                         " ON elements(json_extract(json, '$.' || ?)) WHERE type = ?";
+                         " ON elements(json_extract(json, '$." + jsonField + "')) WHERE type = '" + typeName + "'";
             try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
-                pstmt.setString(1, jsonField);
-                pstmt.setString(2, typeName);
                 pstmt.execute();
             } catch (SQLException e) {
                 throw new DatabaseException("Failed to create SQL index on field: " + jsonField, e);

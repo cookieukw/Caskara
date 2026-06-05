@@ -25,6 +25,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import com.google.gson.JsonObject;
 
 /**
  * Caskara API - Shell & Core Paradigm.
@@ -52,16 +54,16 @@ public class Caskara {
             dataFolder.mkdirs();
         }
         
-        // Ativa o Auto-Vacuum padrão a cada 12 horas
+        // Enable Auto-Vacuum by default every 12 hours
         enableAutoVacuum(12);
         
-        // Ativa o Auto-Backup padrão a cada 1 hora
+        // Enable Auto-Backup by default every 1 hour
         enableAutoBackup(1);
     }
 
     /**
-     * Habilita ou altera o intervalo do Auto-Vacuum em horas.
-     * Se for 0 ou negativo, cancela o Auto-Vacuum atual.
+     * Enables or changes the Auto-Vacuum interval in hours.
+     * If 0 or negative, cancels the current Auto-Vacuum task.
      */
     public static void enableAutoVacuum(long periodHours) {
         if (scheduler == null) {
@@ -86,8 +88,8 @@ public class Caskara {
     }
 
     /**
-     * Habilita ou altera o intervalo do Auto-Backup em horas.
-     * Se for 0 ou negativo, cancela o Auto-Backup atual.
+     * Enables or changes the Auto-Backup interval in hours.
+     * If 0 or negative, cancels the current Auto-Backup task.
      */
     public static void enableAutoBackup(long periodHours) {
         if (scheduler == null) {
@@ -112,13 +114,21 @@ public class Caskara {
     }
 
     /**
-     * Encerra todos os agendamentos do Caskara de forma segura.
-     * Ideal para ser chamado no shutdown do servidor Hytale.
+     * Safely terminates all Caskara background tasks.
+     * Ideal to be called during the Hytale server shutdown process.
      */
     public static void shutdown() {
         if (scheduler != null) {
             scheduler.shutdownNow();
         }
+        for (Shell shell : shells.values()) {
+            try {
+                shell.close();
+            } catch (Exception e) {
+                System.err.println("[Caskara] Failed to close shell: " + e.getMessage());
+            }
+        }
+        shells.clear();
     }
 
     /**
@@ -230,7 +240,7 @@ public class Caskara {
     /**
      * Registers a schema migration for a specific class and version.
      */
-    public static <T> void migration(Class<T> clazz, int version, java.util.function.Function<com.google.gson.JsonObject, com.google.gson.JsonObject> migrator) {
+    public static <T> void migration(Class<T> clazz, int version, Function<JsonObject, JsonObject> migrator) {
         core(clazz).registerMigration(version, migrator);
     }
 
@@ -315,7 +325,7 @@ public class Caskara {
      */
     public static <T> void rotateKey(Class<T> clazz, String oldKey, String newKey) {
         encrypt(clazz, oldKey);
-        java.util.List<T> allData = list(clazz);
+        List<T> allData = list(clazz);
         encrypt(clazz, newKey);
         for (T data : allData) {
             String id = getId(data);
