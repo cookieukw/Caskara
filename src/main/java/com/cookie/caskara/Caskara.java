@@ -2,6 +2,7 @@ package com.cookie.caskara;
 
 import com.cookie.caskara.annotations.CaskaraEntity;
 import com.cookie.caskara.annotations.Id;
+import com.cookie.caskara.commands.CaskaraCommand;
 import com.cookie.caskara.db.BackupManager;
 import com.cookie.caskara.db.Core;
 import com.cookie.caskara.db.Query;
@@ -9,6 +10,7 @@ import com.cookie.caskara.db.Shell;
 import com.cookie.caskara.db.Stats;
 import com.cookie.caskara.db.Transaction;
 import com.cookie.caskara.util.PackageScanner;
+import com.hypixel.hytale.server.core.command.system.CommandRegistry;
 import com.hypixel.hytale.server.core.universe.world.World;
 import java.io.File;
 import java.lang.reflect.Field;
@@ -26,6 +28,10 @@ import java.util.function.Consumer;
 public class Caskara {
     private static File dataFolder;
     private static final Map<String, Shell> shells = new HashMap<>();
+
+    public static Map<String, Shell> getShells() {
+        return shells;
+    }
 
     /**
      * Initializes the Caskara API.
@@ -323,5 +329,13 @@ public class Caskara {
             } catch (Exception ignored) {}
         }
         return null;
+    }
+
+    /**
+     * Registers the built-in Caskara management commands (/caskara) with the server.
+     * Should be called during the plugin's setup() phase.
+     */
+    public static void registerCommands(CommandRegistry registry) {
+        registry.registerCommand(new CaskaraCommand());
     }
 }

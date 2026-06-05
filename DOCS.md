@@ -407,6 +407,34 @@ If you need to save or delete thousands of entities at once, use the `saveAll` a
 
 ```java
 List<Player> massivePlayerList = getThousandsOfPlayers();
+Caskara.saveAll(massivePlayerList);
+
+// Deleting many records simultaneously
+Caskara.deleteAll(Arrays.asList("id1", "id2", "id3"), Player.class);
+```
+
+---
+
+## 6. Admin Commands (In-Game / Console)
+
+Caskara comes with a built-in set of commands to manage databases directly from the Hytale game chat or server console. To make these commands available, you simply need to register them during your plugin's `setup()` method:
+
+```java
+@Override
+protected void setup() {
+    Caskara.init(new File("mods/MyMod/data"));
+    Caskara.registerCommands(this.getCommandRegistry());
+}
+```
+
+This registers the `/caskara` command, restricted to the `"admin"` permission group. 
+
+### Usage
+
+- `/caskara stats`: Prints an aggregated summary of cache hits/misses, queries, and active shell counts across the entire Caskara instance.
+- `/caskara vacuum`: Forces SQLite to run `VACUUM` on all active database shells. This reclaims raw disk space left over by deleted or TTL-expired records.
+- `/caskara scan <package>`: Manually triggers the Auto-Scanner for the given package name to detect and register `@CaskaraEntity` classes on-the-fly.
+- `/caskara dump <entity_id>`: Searches the global database for an exact ID match. Since JSON outputs can be massive, the raw data is formatted and printed to the **Server Console** (via standard output logs) to avoid flooding your chat window.
 
 // Bad: takes several seconds
 for (Player p : massivePlayerList) {
