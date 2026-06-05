@@ -125,6 +125,9 @@ Caskara.encrypt(SecretConfig.class, "your-super-secret-key");
 
 // From now on, SecretConfig data is stored as encrypted blobs in SQLite
 Caskara.save(new SecretConfig("token", "xyz-123"));
+
+// Rotate encryption key seamlessly across all saved data without data loss
+Caskara.rotateKey(SecretConfig.class, "your-super-secret-key", "new-stronger-key");
 ```
 
 ---
