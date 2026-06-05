@@ -45,10 +45,17 @@ graph TD
 Managing data with Caskara is intentionally simple. You don't need to write SQL or define schemas.
 
 ### 1. Model your data
-Any Java class with a default constructor can be a Caskara entity.
+Any Java class with a default constructor can be a Caskara entity. You can optionally use annotations to configure it dynamically:
 ```java
+import com.cookie.caskara.annotations.*;
+
+@CaskaraEntity(shell = "quests") // Store in quests.db instead of global.db
+@Index("title")                  // Create an index for faster title lookups
+@TTL(minutes = 60)               // Quests expire after 60 minutes by default
 public class Quest {
-    public String id; // Automatically synced if named id, uuid, or uid
+    @Id
+    public String questId;       // @Id marks the primary key
+    
     public String title;
     public boolean completed;
 }

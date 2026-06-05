@@ -126,9 +126,18 @@ public class MyPlugin extends JavaPlugin {
 
 ### 3. Define your entity
 
+You can use Caskara annotations to configure entities dynamically.
+
 ```java
+import com.cookie.caskara.annotations.*;
+
+@CaskaraEntity(shell = "players") // Automatically stores in players.db
+@Index("level")                   // Creates an SQL index for the level field
+@TTL(minutes = 30)                // Automatically expires after 30 minutes
 public class PlayerProfile {
-    public String id;   // Caskara uses this as the primary key
+    @Id
+    public String profileId;      // @Id overrides the default "id" field name
+    
     public String name;
     public int level;
     public boolean vip;
