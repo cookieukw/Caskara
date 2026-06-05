@@ -22,13 +22,8 @@ import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import java.util.function.Predicate;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.concurrent.ConcurrentHashMap;
+import com.google.gson.JsonSyntaxException;
+import com.hypixel.hytale.logger.HytaleLogger;
 
 /**
  * A 'Core' represents a collection of a specific type within a Shell.
@@ -273,7 +268,10 @@ public class Core<T> {
                         String id = rs.getString("id");
                         String json = rs.getString("json");
                         int dbVersion = rs.getInt("version");
-                        results.add(applyMigrations(id, json, dbVersion));
+                        T obj = applyMigrations(id, json, dbVersion);
+                        if (obj != null) {
+                            results.add(obj);
+                        }
                     }
                 }
             } catch (SQLException e) {
@@ -348,42 +346,50 @@ public class Core<T> {
 
     private T applyMigrations(String id, String json, int dbVersion) {
         json = decrypt(json);
-        if (dbVersion >= schemaVersion) {
-            T obj = GSON.fromJson(json, clazz);
+        try {
+            if (dbVersion >= schemaVersion) {
+                T obj = GSON.fromJson(json, clazz);
+                syncId(id, obj);
+                cache.put(id, obj);
+                return obj;
+            }
+
+            com.google.gson.JsonObject jsonObject = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+            boolean changed = false;
+
+            for (Map.Entry<Integer, java.util.function.Function<com.google.gson.JsonObject, com.google.gson.JsonObject>> entry : migrations.tailMap(dbVersion, false).entrySet()) {
+                jsonObject = entry.getValue().apply(jsonObject);
+                changed = true;
+            }
+
+            String finalJson = GSON.toJson(jsonObject);
+            if (changed) {
+                final int newVersion = schemaVersion;
+                // Use getConnection() directly — we are already inside a runInLock context
+                try {
+                    String sql = "UPDATE elements SET json = ?, version = ? WHERE id = ? AND type = ?";
+                    try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
+                        pstmt.setString(1, finalJson);
+                        pstmt.setInt(2, newVersion);
+                        pstmt.setString(3, id);
+                        pstmt.setString(4, typeName);
+                        pstmt.executeUpdate();
+                    }
+                } catch (SQLException ignored) {
+                }
+            }
+
+            T obj = GSON.fromJson(finalJson, clazz);
             syncId(id, obj);
             cache.put(id, obj);
             return obj;
+        } catch (JsonSyntaxException | IllegalStateException e) {
+            HytaleLogger.forEnclosingClass().atWarning()
+                .log("Caskara: Failed to read element ID " + id + " of type " + typeName + 
+                     ". The data might be corrupted or an incorrect encryption key was used.");
+            // Ignore the error when trying to read encrypted JSON as plain text (when the security key was not set)
+            return null;
         }
-
-        com.google.gson.JsonObject jsonObject = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
-        boolean changed = false;
-
-        for (Map.Entry<Integer, java.util.function.Function<com.google.gson.JsonObject, com.google.gson.JsonObject>> entry : migrations.tailMap(dbVersion, false).entrySet()) {
-            jsonObject = entry.getValue().apply(jsonObject);
-            changed = true;
-        }
-
-        String finalJson = GSON.toJson(jsonObject);
-        if (changed) {
-            final int newVersion = schemaVersion;
-            // Use getConnection() directly — we are already inside a runInLock context
-            try {
-                String sql = "UPDATE elements SET json = ?, version = ? WHERE id = ? AND type = ?";
-                try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
-                    pstmt.setString(1, finalJson);
-                    pstmt.setInt(2, newVersion);
-                    pstmt.setString(3, id);
-                    pstmt.setString(4, typeName);
-                    pstmt.executeUpdate();
-                }
-            } catch (SQLException ignored) {
-            }
-        }
-
-        T obj = GSON.fromJson(finalJson, clazz);
-        syncId(id, obj);
-        cache.put(id, obj);
-        return obj;
     }
 
     /**
