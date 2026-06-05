@@ -28,10 +28,12 @@ public class CaskaraAdminLogicTest {
         }
     }
 
+    private static String savedId;
+
     @BeforeAll
     public static void setup() {
         Caskara.init(testDir);
-        Caskara.save(new AdminDummy("dummy123", "secret_data"), 5000);
+        savedId = Caskara.save(new AdminDummy("dummy123", "secret_data"), 5000);
     }
 
     @AfterAll
@@ -59,9 +61,9 @@ public class CaskaraAdminLogicTest {
 
     @Test
     public void testDumpEntityExists() {
-        List<String> dumpResult = CaskaraAdminLogic.dumpEntity("dummy123");
+        List<String> dumpResult = CaskaraAdminLogic.dumpEntity(savedId);
         assertEquals(1, dumpResult.size());
-        assertTrue(dumpResult.get(0).contains("Dumped entity dummy123 to Server Console!"));
+        assertTrue(dumpResult.get(0).contains("Dumped entity " + savedId + " to Server Console!"));
     }
 
     @Test
