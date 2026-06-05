@@ -436,6 +436,22 @@ This registers the `/caskara` command, restricted to the `"admin"` permission gr
 - `/caskara scan <package>`: Manually triggers the Auto-Scanner for the given package name to detect and register `@CaskaraEntity` classes on-the-fly.
 - `/caskara dump <entity_id>`: Searches the global database for an exact ID match. Since JSON outputs can be massive, the raw data is formatted and printed to the **Server Console** (via standard output logs) to avoid flooding your chat window.
 
+### Background Auto-Vacuum
+
+By default, when you call `Caskara.init()`, it automatically activates the **Auto-Vacuum** task. This task runs silently in the background every **12 hours** to reclaim unused SQLite disk space.
+
+If your server has different needs, you can customize the frequency or disable it entirely:
+
+```java
+// Change to run every 24 hours
+Caskara.enableAutoVacuum(24);
+
+// Disable the Auto-Vacuum completely
+Caskara.enableAutoVacuum(0);
+```
+
+> **Note**: Don't forget to call `Caskara.shutdown()` when your Hytale server stops to cleanly terminate the background executor thread.
+
 // Bad: takes several seconds
 for (Player p : massivePlayerList) {
     Caskara.save(p); 

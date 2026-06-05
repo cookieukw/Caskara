@@ -19,6 +19,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
@@ -28,6 +32,9 @@ import java.util.function.Consumer;
 public class Caskara {
     private static File dataFolder;
     private static final Map<String, Shell> shells = new HashMap<>();
+    
+    private static ScheduledExecutorService scheduler;
+    private static ScheduledFuture<?> autoVacuumTask;
 
     public static Map<String, Shell> getShells() {
         return shells;
@@ -41,6 +48,45 @@ public class Caskara {
         dataFolder = folder;
         if (!dataFolder.exists()) {
             dataFolder.mkdirs();
+        }
+        
+        // Ativa o Auto-Vacuum padrão a cada 12 horas
+        enableAutoVacuum(12);
+    }
+
+    /**
+     * Habilita ou altera o intervalo do Auto-Vacuum em horas.
+     * Se for 0 ou negativo, cancela o Auto-Vacuum atual.
+     */
+    public static void enableAutoVacuum(long periodHours) {
+        if (scheduler == null) {
+            scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "Caskara-AutoVacuum");
+                t.setDaemon(true);
+                return t;
+            });
+        }
+        
+        if (autoVacuumTask != null && !autoVacuumTask.isCancelled()) {
+            autoVacuumTask.cancel(false);
+        }
+        
+        if (periodHours > 0) {
+            autoVacuumTask = scheduler.scheduleAtFixedRate(() -> {
+                try {
+                    com.cookie.caskara.commands.CaskaraAdminLogic.runVacuum();
+                } catch (Exception ignored) {}
+            }, periodHours, periodHours, TimeUnit.HOURS);
+        }
+    }
+
+    /**
+     * Encerra todos os agendamentos do Caskara de forma segura.
+     * Ideal para ser chamado no shutdown do servidor Hytale.
+     */
+    public static void shutdown() {
+        if (scheduler != null) {
+            scheduler.shutdownNow();
         }
     }
 
