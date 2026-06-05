@@ -8,8 +8,6 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalAr
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 
@@ -27,7 +25,7 @@ public class CaskaraCommand extends AbstractCommand {
     }
 
     @Override
-    @SuppressWarnings({"null", "unchecked"})
+    @SuppressWarnings({"null"})
     protected CompletableFuture<Void> execute(@Nonnull CommandContext ctx) {
         String action = ctx.get(actionArg).toLowerCase();
         String target = ctx.provided(targetArg) ? ctx.get(targetArg) : null;
