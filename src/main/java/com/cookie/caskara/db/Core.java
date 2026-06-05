@@ -211,7 +211,7 @@ public class Core<T> {
         shell.getStats().recordCacheMiss();
 
         CompletableFuture<T> future = CompletableFuture.supplyAsync(() -> shell.runInLock(() -> {
-            String sql = "SELECT json, version FROM elements WHERE id = ? AND type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)";
+            String sql = "SELECT json, version, expires_at FROM elements WHERE id = ? AND type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)";
             try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
                 pstmt.setString(1, id);
                 pstmt.setString(2, typeName);
@@ -220,7 +220,9 @@ public class Core<T> {
                     if (rs.next()) {
                         String json = rs.getString("json");
                         int dbVersion = rs.getInt("version");
-                        return applyMigrations(id, json, dbVersion);
+                        long exp = rs.getLong("expires_at");
+                        Long expiresAt = rs.wasNull() ? null : exp;
+                        return applyMigrations(id, json, dbVersion, expiresAt);
                     }
                 }
             } catch (SQLException e) {
@@ -298,7 +300,7 @@ public class Core<T> {
     public List<T> extractAll() {
         return shell.runInLock(() -> {
             List<T> results = new ArrayList<>();
-            String sql = "SELECT id, json, version FROM elements WHERE type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)";
+            String sql = "SELECT id, json, version, expires_at FROM elements WHERE type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)";
             try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
                 pstmt.setString(1, typeName);
                 pstmt.setLong(2, System.currentTimeMillis());
@@ -307,7 +309,9 @@ public class Core<T> {
                         String id = rs.getString("id");
                         String json = rs.getString("json");
                         int dbVersion = rs.getInt("version");
-                        T obj = applyMigrations(id, json, dbVersion);
+                        long exp = rs.getLong("expires_at");
+                        Long expiresAt = rs.wasNull() ? null : exp;
+                        T obj = applyMigrations(id, json, dbVersion, expiresAt);
                         if (obj != null) {
                             results.add(obj);
                         }
@@ -383,13 +387,13 @@ public class Core<T> {
         }
     }
 
-    private T applyMigrations(String id, String json, int dbVersion) {
+    private T applyMigrations(String id, String json, int dbVersion, Long expiresAt) {
         json = decrypt(json);
         try {
             if (dbVersion >= schemaVersion) {
                 T obj = GSON.fromJson(json, clazz);
                 syncId(id, obj);
-                cache.put(id, obj);
+                if (expiresAt == null) cache.put(id, obj);
                 return obj;
             }
 
@@ -420,7 +424,7 @@ public class Core<T> {
 
             T obj = GSON.fromJson(finalJson, clazz);
             syncId(id, obj);
-            cache.put(id, obj);
+            if (expiresAt == null) cache.put(id, obj);
             return obj;
         } catch (JsonSyntaxException | IllegalStateException e) {
             HytaleLogger.forEnclosingClass().atWarning()

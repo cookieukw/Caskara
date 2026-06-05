@@ -26,7 +26,8 @@ class AnnotationsTest {
 
     @AfterEach
     void teardown() {
-        defaultShell.close();
+        // Do not close defaultShell to prevent RejectedExecutionException on subsequent tests
+        // since Caskara global state persists across tests.
     }
 
     @Test
@@ -63,8 +64,8 @@ class AnnotationsTest {
     @DisplayName("@Encrypted throws error if no key is provided")
     void testEncryptedAnnotationWithoutKey() {
         // We register the entity but do NOT call Caskara.encrypt()
-        Caskara.register(SecureEntity.class);
-        SecureEntity entity = new SecureEntity();
+        Caskara.register(SecureFailEntity.class);
+        SecureFailEntity entity = new SecureFailEntity();
         
         DatabaseException exception = assertThrows(DatabaseException.class, () -> {
             Caskara.save(entity);
@@ -100,6 +101,12 @@ class AnnotationsTest {
 
     @Encrypted
     static class SecureEntity {
+        @Id
+        public String id;
+    }
+
+    @Encrypted
+    static class SecureFailEntity {
         @Id
         public String id;
     }
