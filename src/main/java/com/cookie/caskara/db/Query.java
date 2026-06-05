@@ -61,6 +61,17 @@ public class Query<T> {
     }
 
     /**
+     * Performs a blazing fast Full-Text Search across the entire JSON object using SQLite FTS5.
+     * This requires the entity class to be annotated with @FullTextSearch.
+     */
+    public Query<T> search(String text) {
+        if (!core.isFtsEnabled()) {
+            throw new DatabaseException("Cannot use search() because @FullTextSearch is missing on " + typeName);
+        }
+        return addSqlFilter("rowid IN (SELECT rowid FROM fts_elements WHERE fts_elements MATCH ?)", text);
+    }
+
+    /**
      * Filters where field is greater than value.
      */
     public Query<T> fieldGreaterThan(String fieldName, Object value) {
@@ -79,7 +90,6 @@ public class Query<T> {
     /**
      * Filters where field matches one of the values in the list.
      */
-    @SuppressWarnings("unchecked")
     public Query<T> fieldIn(String fieldName, List<Object> values) {
         if (values == null || values.isEmpty()) return this;
         conditions.add(new Condition(fieldName, "IN", values));
@@ -195,6 +205,7 @@ public class Query<T> {
     /**
      * In-memory fallback for encrypted cores where SQL JSON functions fail.
      */
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private List<T> fetchFromMemory() {
         long startTime = System.nanoTime();
         try {
@@ -232,7 +243,7 @@ public class Query<T> {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private boolean match(T item, Condition cond) {
         Comparable actual = getFieldValue(item, cond.fieldName);
         if (actual == null) return false;
@@ -255,7 +266,7 @@ public class Query<T> {
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private int compare(Comparable actual, Object target) {
         if (target instanceof Number && actual instanceof Number) {
             return Double.compare(((Number) actual).doubleValue(), ((Number) target).doubleValue());
@@ -266,6 +277,7 @@ public class Query<T> {
         return actual.compareTo(target.toString());
     }
 
+    @SuppressWarnings("rawtypes")
     private Comparable getFieldValue(T item, String fieldName) {
         try {
             // Convert to JsonObject to easily extract any field

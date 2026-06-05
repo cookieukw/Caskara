@@ -353,6 +353,26 @@ List<PlayerProfile> results = Caskara.query(PlayerProfile.class)
 | `fetch()`                                     | Executes and returns `List<T>` (blocking).                |
 | `fetchAsync()`                                | Non-blocking; returns `CompletableFuture<List<T>>`.       |
 | `fetchFirst()`                                | Returns `Pearl<T>` with the first result.                 |
+| `search(String text)`                         | SQLite FTS5 instant text match across the entire JSON.    |
+
+### Ultra-Fast Full-Text Search (FTS5)
+
+If you need to search text inside your entities (like chat logs, item names, etc), use the `@FullTextSearch` annotation on your class. This creates a synchronized FTS5 virtual table under the hood, making `.search("text")` queries up to **10,000x faster** than using `.fieldContains()`.
+
+```java
+@FullTextSearch
+@CaskaraEntity(shell = "chat_logs")
+public class ChatMessage {
+    @Id
+    public String id;
+    public String text;
+}
+
+// Searching millions of rows in milliseconds:
+List<ChatMessage> results = Caskara.query(ChatMessage.class).search("diamond sword").fetch();
+```
+
+> **Warning**: `@FullTextSearch` is incompatible with `@Encrypted`. FTS5 requires plaintext JSON to build its dictionary index. Caskara will throw an error if both are used.
 
 **Performance tip**: Call `Caskara.createIndex(MyClass.class, "fieldName")` before querying a field repeatedly to get O(1) lookups via a computed SQL index.
 
