@@ -1,18 +1,22 @@
 package com.cookie.caskara;
 
+import com.cookie.caskara.annotations.CaskaraEntity;
+import com.cookie.caskara.annotations.Id;
 import com.cookie.caskara.db.BackupManager;
 import com.cookie.caskara.db.Core;
 import com.cookie.caskara.db.Query;
 import com.cookie.caskara.db.Shell;
 import com.cookie.caskara.db.Stats;
+import com.cookie.caskara.db.Transaction;
 import com.hypixel.hytale.server.core.universe.world.World;
 import java.io.File;
+import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * Caskara API - Shell & Core Paradigm.
@@ -57,16 +61,28 @@ public class Caskara {
     }
 
     /**
-     * Quickly gets a Core from the default Shell.
+     * Quickly gets a Core. Respects the @CaskaraEntity(shell="...") annotation if present.
+     * Otherwise defaults to the default global Shell.
      */
     public static <T> Core<T> core(Class<T> clazz) {
+        CaskaraEntity entity = clazz.getAnnotation(CaskaraEntity.class);
+        if (entity != null && !entity.shell().equals("default")) {
+            return shell(entity.shell()).core(clazz);
+        }
         return shell().core(clazz);
+    }
+
+    /**
+     * Pre-registers a class to initialize its Core, create SQL indexes, and validate annotations early.
+     */
+    public static <T> void register(Class<T> clazz) {
+        core(clazz); // Getting the core triggers its constructor and annotation parsing
     }
 
     /**
      * Returns a fluent Query builder for the given class.
      */
-    public static <T> com.cookie.caskara.db.Query<T> query(Class<T> clazz) {
+    public static <T>Query<T> query(Class<T> clazz) {
         return core(clazz).query();
     }
 
@@ -92,8 +108,9 @@ public class Caskara {
      * Saves an object with a TTL (Time To Live).
      */
     @SuppressWarnings("unchecked")
-    public static <T> String save(T object, java.time.Duration ttl) {
-        return core((Class<T>) object.getClass()).preserve(null, object, System.currentTimeMillis() + ttl.toMillis());
+    public static <T> String save(T object, Duration ttl) {
+        long millis = (ttl.getSeconds() * 1000L) + (ttl.getNano() / 1000000L);
+        return core((Class<T>) object.getClass()).preserve(null, object, System.currentTimeMillis() + millis);
     }
 
     /**
@@ -150,7 +167,7 @@ public class Caskara {
     /**
      * Lists all objects of a certain type.
      */
-    public static <T> java.util.List<T> list(Class<T> clazz) {
+    public static <T> List<T> list(Class<T> clazz) {
         return core(clazz).extractAll();
     }
 
@@ -189,14 +206,14 @@ public class Caskara {
     /**
      * Executes a series of operations within a single SQL transaction on the default shell.
      */
-    public static void transaction(java.util.function.Consumer<com.cookie.caskara.db.Transaction> action) {
+    public static void transaction(Consumer<Transaction> action) {
         shell().transaction(action);
     }
 
     /**
      * Gets performance metrics for the default shell.
      */
-    public static com.cookie.caskara.db.Stats stats() {
+    public static Stats stats() {
         return shell().getStats();
     }
 
@@ -229,13 +246,26 @@ public class Caskara {
     }
 
     /**
-     * Utility: Gets the ID from an object (checking id, uuid, uid fields).
+     * Utility: Gets the ID from an object (checking @Id, then id, uuid, uid fields).
      */
     public static String getId(Object object) {
         if (object == null) return null;
+        
+        // 1. Check for @Id annotation
+        for (Field field : object.getClass().getDeclaredFields()) {
+            if (field.isAnnotationPresent(Id.class)) {
+                try {
+                    field.setAccessible(true);
+                    Object val = field.get(object);
+                    if (val != null) return val.toString();
+                } catch (Exception ignored) {}
+            }
+        }
+        
+        // 2. Fallback to name-based conventions
         for (String fName : new String[]{"id", "uuid", "uid"}) {
             try {
-                java.lang.reflect.Field field = object.getClass().getDeclaredField(fName);
+                Field field = object.getClass().getDeclaredField(fName);
                 field.setAccessible(true);
                 Object val = field.get(object);
                 if (val != null) return val.toString();

@@ -1,6 +1,11 @@
 package com.cookie.caskara.db;
 
+import com.cookie.caskara.annotations.Index;
+import com.cookie.caskara.annotations.Indices;
+import com.cookie.caskara.annotations.TTL;
 import com.cookie.caskara.exceptions.DatabaseException;
+import com.cookie.caskara.exceptions.ValidationException;
+
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -17,11 +22,15 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiConsumer;
+import java.util.function.Predicate;
+
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.hypixel.hytale.logger.HytaleLogger;
 
@@ -29,7 +38,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
  * A 'Core' represents a collection of a specific type within a Shell.
  */
 public class Core<T> {
-    private static final com.google.gson.Gson GSON = new com.google.gson.GsonBuilder().serializeNulls().create();
+    private static final Gson GSON = new GsonBuilder().serializeNulls().create();
     private final Shell shell;
     private final Class<T> clazz;
     private final String typeName;
@@ -60,10 +69,31 @@ public class Core<T> {
     // Security (Phase 8 bonus)
     private String securityKey = null;
 
+    // Annotations Support
+    private Long defaultTtlMillis = null;
+
     public Core(Shell shell, Class<T> clazz) {
         this.shell = shell;
         this.clazz = clazz;
         this.typeName = clazz.getSimpleName().toLowerCase();
+
+        // Parse @TTL
+        TTL ttl = clazz.getAnnotation(TTL.class);
+        if (ttl != null) {
+            this.defaultTtlMillis = (ttl.minutes() * 60_000L) + (ttl.seconds() * 1000L);
+        }
+
+        // Parse @Index and @Indices
+        Index singleIndex = clazz.getAnnotation(Index.class);
+        if (singleIndex != null) {
+            createIndex(singleIndex.value());
+        }
+        Indices multipleIndices = clazz.getAnnotation(Indices.class);
+        if (multipleIndices != null) {
+            for (Index idx : multipleIndices.value()) {
+                createIndex(idx.value());
+            }
+        }
     }
 
     /**
@@ -85,19 +115,28 @@ public class Core<T> {
         // Sync ID with object fields
         syncId(id, element);
 
+        if (expiresAtMillis == null && defaultTtlMillis != null) {
+            expiresAtMillis = System.currentTimeMillis() + defaultTtlMillis;
+        }
+
+        if (securityKey == null && clazz.isAnnotationPresent(com.cookie.caskara.annotations.Encrypted.class)) {
+            throw new DatabaseException("Entity " + typeName + " is marked with @Encrypted but no security key was provided via Caskara.encrypt()!");
+        }
+
         // Run validation
-        for (java.util.function.Predicate<T> validator : validators) {
+        for (Predicate<T> validator : validators) {
             if (!validator.test(element)) {
-                throw new com.cookie.caskara.exceptions.ValidationException("Validation failed for entity of type: " + typeName);
+                throw new ValidationException("Validation failed for entity of type: " + typeName);
             }
         }
 
         // Trigger Before Save Hooks
-        for (java.util.function.BiConsumer<String, T> hook : beforeSaveHooks) {
+        for (BiConsumer<String, T> hook : beforeSaveHooks) {
             hook.accept(id, element);
         }
         
         final String finalId = id;
+        final Long finalExpiresAt = expiresAtMillis;
         final int currentVersion = schemaVersion;
         shell.runInLock(() -> {
             String json = encrypt(GSON.toJson(element));
@@ -106,8 +145,8 @@ public class Core<T> {
                 pstmt.setString(1, finalId);
                 pstmt.setString(2, typeName);
                 pstmt.setString(3, json);
-                if (expiresAtMillis != null) {
-                    pstmt.setLong(4, expiresAtMillis);
+                if (finalExpiresAt != null) {
+                    pstmt.setLong(4, finalExpiresAt);
                 } else {
                     pstmt.setNull(4, java.sql.Types.INTEGER);
                 }
@@ -116,7 +155,7 @@ public class Core<T> {
                 cache.put(finalId, element);
                 // If this entity has a TTL, evict it from cache immediately so
                 // the next extract() goes to the DB where expires_at is checked.
-                if (expiresAtMillis != null) {
+                if (finalExpiresAt != null) {
                     cache.remove(finalId);
                 }
 
@@ -437,10 +476,31 @@ public class Core<T> {
     }
 
     /**
-     * Injects the ID into fields named 'id', 'uuid', or 'uid' using reflection.
+     * Injects the ID into fields annotated with @Id, or named 'id', 'uuid', or 'uid'.
      */
     private void syncId(String id, T element) {
         if (element == null || id == null) return;
+        
+        boolean synced = false;
+        
+        // 1. Try @Id annotation
+        for (Field field : clazz.getDeclaredFields()) {
+            if (field.isAnnotationPresent(com.cookie.caskara.annotations.Id.class)) {
+                try {
+                    field.setAccessible(true);
+                    Object current = field.get(element);
+                    if (current == null || (current instanceof String && ((String) current).isEmpty())) {
+                        field.set(element, id);
+                    }
+                    synced = true;
+                    break;
+                } catch (Exception ignored) {}
+            }
+        }
+        
+        if (synced) return;
+
+        // 2. Fallback to name-based conventions
         for (String fName : new String[]{"id", "uuid", "uid"}) {
             try {
                 Field field = clazz.getDeclaredField(fName);
@@ -450,6 +510,7 @@ public class Core<T> {
                 if (current == null || (current instanceof String && ((String) current).isEmpty())) {
                     field.set(element, id);
                 }
+                break;
             } catch (NoSuchFieldException ignored) {
             } catch (Exception e) {
                 // Fail silently for reflection sync
