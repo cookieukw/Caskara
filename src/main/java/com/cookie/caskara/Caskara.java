@@ -81,11 +81,11 @@ public class Caskara {
     }
 
     /**
-     * Saves an object with an automatic UUID.
+     * Saves an object. If it already has an ID, it updates it. Otherwise, generates an automatic UUID.
      */
     @SuppressWarnings("unchecked")
     public static <T> String save(T object) {
-        return core((Class<T>) object.getClass()).preserve(object);
+        return core((Class<T>) object.getClass()).preserve(getId(object), object);
     }
 
     /**
@@ -166,6 +166,24 @@ public class Caskara {
      */
     public static <T> void encrypt(Class<T> clazz, String securityKey) {
         core(clazz).setSecurityKey(securityKey);
+    }
+
+    /**
+     * Rotates the encryption key for a specific entity type.
+     * It reads all data with the old key, updates the key, and saves them encrypted with the new key.
+     */
+    public static <T> void rotateKey(Class<T> clazz, String oldKey, String newKey) {
+        encrypt(clazz, oldKey);
+        java.util.List<T> allData = list(clazz);
+        encrypt(clazz, newKey);
+        for (T data : allData) {
+            String id = getId(data);
+            if (id != null) {
+                save(id, data);
+            } else {
+                save(data);
+            }
+        }
     }
 
     /**
