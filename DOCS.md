@@ -246,6 +246,7 @@ All methods in this class are **static**. They operate on the **default global s
 | `exportShell(File file)`                                                      | Dumps all data from the default Shell to a JSON file.                |
 | `importShell(File file)`                                                      | Bulk-imports records from a JSON file into the default Shell.        |
 | `encrypt(Class<T> clazz, String key)`                                         | Enables AES-128 encryption for all records of `clazz`.               |
+| `rotateKey(Class<T> clazz, String oldKey, String newKey)`                     | Re-encrypts all records of `clazz` from an old key to a new key.     |
 | `migration(Class<T> clazz, int version, Function<JsonObject, JsonObject> fn)` | Registers a schema migration function.                               |
 | `getId(Object object)`                                                        | Reflectively reads the `id`, `uuid`, or `uid` field from any object. |
 
@@ -430,7 +431,13 @@ Caskara.save(new SecretToken("discord-bot-token", "xyzABC123"));
 SecretToken loaded = Caskara.load("my-token", SecretToken.class); // decrypted
 ```
 
-> **Warning**: Changing the encryption key after data is already stored will make existing records unreadable. Always use the same key across restarts.
+#### Key Rotation
+If you need to change your encryption key safely without losing data, use the `rotateKey` method. It loads all existing data with the old key, and rewrites them using the new key:
+
+```java
+Caskara.rotateKey(SecretToken.class, "old-password", "new-stronger-password");
+```
+> **Safety Guarantee**: Caskara gracefully handles data if read with an incorrect key (returning `null` and logging a warning instead of crashing). However, rewriting data with the wrong key active will overwrite it. Always use `rotateKey` for smooth transitions.
 
 ---
 
