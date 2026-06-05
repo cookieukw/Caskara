@@ -22,16 +22,16 @@ public class CaskaraCommand extends AbstractCommand {
         super("caskara", "Caskara Database Management");
         this.setPermissionGroups("admin"); // Restricts to OP / Admin
         
-        this.actionArg = this.withRequiredArg("action", "stats | vacuum | dump | scan", ArgTypes.STRING);
-        this.targetArg = this.withOptionalArg("target", "Entity ID (for dump) or package (for scan)", ArgTypes.STRING);
+        this.actionArg = this.withRequiredArg("action", "stats | vacuum | dump | scan | backup | autobackup", ArgTypes.STRING);
+        this.targetArg = this.withOptionalArg("target", "Target ID/Package or Hours", ArgTypes.STRING);
     }
 
     @Override
-    @SuppressWarnings({"null"})
+    @SuppressWarnings({"null", "unchecked"})
     protected CompletableFuture<Void> execute(@Nonnull CommandContext ctx) {
         String action = ctx.get(actionArg).toLowerCase();
         String target = ctx.provided(targetArg) ? ctx.get(targetArg) : null;
-        List<String> responses;
+        java.util.List<String> responses;
 
         switch (action) {
             case "stats":
@@ -41,6 +41,13 @@ public class CaskaraCommand extends AbstractCommand {
                 ctx.sendMessage(Message.raw("Starting VACUUM on all databases..."));
                 responses = CaskaraAdminLogic.runVacuum();
                 break;
+            case "backup":
+                ctx.sendMessage(Message.raw("Starting Global Backup..."));
+                responses = CaskaraAdminLogic.runBackup();
+                break;
+            case "autobackup":
+                responses = CaskaraAdminLogic.toggleAutoBackup(target);
+                break;
             case "dump":
                 responses = CaskaraAdminLogic.dumpEntity(target);
                 break;
@@ -48,7 +55,7 @@ public class CaskaraCommand extends AbstractCommand {
                 responses = CaskaraAdminLogic.scanPackage(target);
                 break;
             default:
-                responses = Collections.singletonList("Unknown action: " + action + ". Use: stats, vacuum, dump, or scan.");
+                responses = java.util.Collections.singletonList("Unknown action: " + action + ". Use: stats, vacuum, dump, scan, backup, or autobackup.");
                 break;
         }
 

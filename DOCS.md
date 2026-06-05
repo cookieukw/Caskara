@@ -433,21 +433,29 @@ This registers the `/caskara` command, restricted to the `"admin"` permission gr
 
 - `/caskara stats`: Prints an aggregated summary of cache hits/misses, queries, and active shell counts across the entire Caskara instance.
 - `/caskara vacuum`: Forces SQLite to run `VACUUM` on all active database shells. This reclaims raw disk space left over by deleted or TTL-expired records.
+- `/caskara backup`: Manually triggers an instant backup of all active database shells. The `.bak` files are saved in a `backups` directory next to the `.db` files.
+- `/caskara autobackup <hours>`: Changes the interval of the Auto-Backup system dynamically without needing to restart the server. Use `0` to disable it.
 - `/caskara scan <package>`: Manually triggers the Auto-Scanner for the given package name to detect and register `@CaskaraEntity` classes on-the-fly.
 - `/caskara dump <entity_id>`: Searches the global database for an exact ID match. Since JSON outputs can be massive, the raw data is formatted and printed to the **Server Console** (via standard output logs) to avoid flooding your chat window.
 
-### Background Auto-Vacuum
+### Background Auto-Tasks (Vacuum & Backup)
 
-By default, when you call `Caskara.init()`, it automatically activates the **Auto-Vacuum** task. This task runs silently in the background every **12 hours** to reclaim unused SQLite disk space.
+By default, when you call `Caskara.init()`, two automated systems are silently activated in the background:
+1. **Auto-Vacuum**: Runs every **12 hours** to reclaim unused disk space.
+2. **Auto-Backup**: Runs every **1 hour** to safely copy all database files (using SQLite locks to prevent corruption).
 
-If your server has different needs, you can customize the frequency or disable it entirely:
+If your server has different needs, you can customize their frequencies or disable them entirely directly via Java:
 
 ```java
 // Change to run every 24 hours
 Caskara.enableAutoVacuum(24);
 
-// Disable the Auto-Vacuum completely
+// Change backups to every 6 hours
+Caskara.enableAutoBackup(6);
+
+// Disable completely (0 or negative)
 Caskara.enableAutoVacuum(0);
+Caskara.enableAutoBackup(0);
 ```
 
 > **Note**: Don't forget to call `Caskara.shutdown()` when your Hytale server stops to cleanly terminate the background executor thread.

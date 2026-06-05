@@ -2,6 +2,7 @@ package com.cookie.caskara;
 
 import com.cookie.caskara.annotations.CaskaraEntity;
 import com.cookie.caskara.annotations.Id;
+import com.cookie.caskara.commands.CaskaraAdminLogic;
 import com.cookie.caskara.commands.CaskaraCommand;
 import com.cookie.caskara.db.BackupManager;
 import com.cookie.caskara.db.Core;
@@ -35,6 +36,7 @@ public class Caskara {
     
     private static ScheduledExecutorService scheduler;
     private static ScheduledFuture<?> autoVacuumTask;
+    private static ScheduledFuture<?> autoBackupTask;
 
     public static Map<String, Shell> getShells() {
         return shells;
@@ -52,6 +54,9 @@ public class Caskara {
         
         // Ativa o Auto-Vacuum padrão a cada 12 horas
         enableAutoVacuum(12);
+        
+        // Ativa o Auto-Backup padrão a cada 1 hora
+        enableAutoBackup(1);
     }
 
     /**
@@ -75,6 +80,32 @@ public class Caskara {
             autoVacuumTask = scheduler.scheduleAtFixedRate(() -> {
                 try {
                     com.cookie.caskara.commands.CaskaraAdminLogic.runVacuum();
+                } catch (Exception ignored) {}
+            }, periodHours, periodHours, TimeUnit.HOURS);
+        }
+    }
+
+    /**
+     * Habilita ou altera o intervalo do Auto-Backup em horas.
+     * Se for 0 ou negativo, cancela o Auto-Backup atual.
+     */
+    public static void enableAutoBackup(long periodHours) {
+        if (scheduler == null) {
+            scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "Caskara-Scheduler");
+                t.setDaemon(true);
+                return t;
+            });
+        }
+        
+        if (autoBackupTask != null && !autoBackupTask.isCancelled()) {
+            autoBackupTask.cancel(false);
+        }
+        
+        if (periodHours > 0) {
+            autoBackupTask = scheduler.scheduleAtFixedRate(() -> {
+                try {
+                    CaskaraAdminLogic.runBackup();
                 } catch (Exception ignored) {}
             }, periodHours, periodHours, TimeUnit.HOURS);
         }
@@ -327,12 +358,7 @@ public class Caskara {
         PackageScanner.scanAndRegister(packageName);
     }
 
-    /**
-     * Enables automatic backups for the default shell.
-     */
-    public static void enableAutoBackup(int intervalMinutes) {
-        new BackupManager(shell(), new File(dataFolder, "backups")).startAutoBackup(intervalMinutes);
-    }
+
 
     /**
      * Exports the default shell data to a JSON file.

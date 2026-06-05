@@ -60,6 +60,19 @@ public class CaskaraAdminLogicTest {
     }
 
     @Test
+    public void testRunBackup() {
+        List<String> backupResult = CaskaraAdminLogic.runBackup();
+        assertEquals(1, backupResult.size());
+        assertTrue(backupResult.get(0).contains("Global Backup completed"));
+
+        // Verify the file was created
+        File backupDir = new File(new File(testDir, "global"), "backups");
+        assertTrue(backupDir.exists(), "Backup directory should be created");
+        File[] bakFiles = backupDir.listFiles((dir, name) -> name.endsWith(".bak"));
+        assertTrue(bakFiles != null && bakFiles.length > 0, "There should be at least one .bak file");
+    }
+
+    @Test
     public void testDumpEntityExists() {
         List<String> dumpResult = CaskaraAdminLogic.dumpEntity(savedId);
         assertEquals(1, dumpResult.size());

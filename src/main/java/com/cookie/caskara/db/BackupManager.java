@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit;
  * Manages automatic backups for Caskara Shells.
  */
 public class BackupManager {
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final Shell shell;
     private final File backupFolder;
 
@@ -22,13 +21,6 @@ public class BackupManager {
         if (!backupFolder.exists()) {
             backupFolder.mkdirs();
         }
-    }
-
-    /**
-     * Starts automatic backups with a specific interval.
-     */
-    public void startAutoBackup(int intervalMinutes) {
-        scheduler.scheduleAtFixedRate(this::performBackup, intervalMinutes, intervalMinutes, TimeUnit.MINUTES);
     }
 
     /**

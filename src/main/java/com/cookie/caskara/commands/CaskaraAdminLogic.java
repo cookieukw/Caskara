@@ -1,8 +1,10 @@
 package com.cookie.caskara.commands;
 
 import com.cookie.caskara.Caskara;
+import com.cookie.caskara.db.BackupManager;
 import com.cookie.caskara.db.Shell;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -107,6 +109,49 @@ public class CaskaraAdminLogic {
         } catch (Exception e) {
             output.add("Scan failed! See console.");
             System.err.println("[Caskara] Scan failed: " + e.getMessage());
+        }
+        return output;
+    }
+
+    public static List<String> runBackup() {
+        List<String> output = new ArrayList<>();
+        long start = System.currentTimeMillis();
+        int count = 0;
+
+        for (Shell shell : Caskara.getShells().values()) {
+            try {
+                // Instantiates a temporary BackupManager pointing to a 'backups' folder alongside the shell
+                File backupFolder = new File(shell.getFile().getParentFile(), "backups");
+                BackupManager bm = new BackupManager(shell, backupFolder);
+                bm.performBackup();
+                count++;
+            } catch (Exception e) {
+                output.add("[Error] Failed to backup a shell: " + e.getMessage());
+            }
+        }
+
+        long took = System.currentTimeMillis() - start;
+        output.add("Global Backup completed on " + count + " databases in " + took + "ms.");
+        return output;
+    }
+
+    public static List<String> toggleAutoBackup(String hoursStr) {
+        List<String> output = new ArrayList<>();
+        if (hoursStr == null || hoursStr.isEmpty()) {
+            output.add("Usage: /caskara autobackup <hours> (0 to disable)");
+            return output;
+        }
+
+        try {
+            long hours = Long.parseLong(hoursStr);
+            Caskara.enableAutoBackup(hours);
+            if (hours > 0) {
+                output.add("Auto-Backup is now scheduled to run every " + hours + " hour(s).");
+            } else {
+                output.add("Auto-Backup has been DISABLED.");
+            }
+        } catch (NumberFormatException e) {
+            output.add("Invalid hours format: " + hoursStr);
         }
         return output;
     }
