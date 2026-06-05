@@ -124,6 +124,15 @@ public class MyPlugin extends JavaPlugin {
 
 > **Important**: `Caskara.init()` must be called **before** any other Caskara method.
 
+### Auto-Scan Package (Recommended)
+
+Instead of manually registering every single entity class using `Caskara.register(MyClass.class)`, you can tell Caskara to scan your mod's package recursively. It will automatically find and register everything marked with `@CaskaraEntity`.
+
+```java
+// Scans com.myhytalemod and registers all @CaskaraEntity classes automatically!
+Caskara.scanPackage("com.myhytalemod");
+```
+
 ### 3. Define your entity
 
 You can use Caskara annotations to configure entities dynamically.

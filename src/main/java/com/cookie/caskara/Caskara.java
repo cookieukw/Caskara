@@ -8,6 +8,7 @@ import com.cookie.caskara.db.Query;
 import com.cookie.caskara.db.Shell;
 import com.cookie.caskara.db.Stats;
 import com.cookie.caskara.db.Transaction;
+import com.cookie.caskara.util.PackageScanner;
 import com.hypixel.hytale.server.core.universe.world.World;
 import java.io.File;
 import java.lang.reflect.Field;
@@ -258,10 +259,20 @@ public class Caskara {
     }
 
     /**
-     * Creates a high-performance index on a JSON field.
+     * Rebuilds an index on a specific JSON field for faster queries.
      */
     public static <T> void createIndex(Class<T> clazz, String jsonField) {
         core(clazz).createIndex(jsonField);
+    }
+
+    /**
+     * Scans a package recursively to find and register all classes annotated with @CaskaraEntity.
+     * This avoids having to call Caskara.register() manually for every entity.
+     *
+     * @param packageName The base package to scan, e.g., "com.mymod.data"
+     */
+    public static void scanPackage(String packageName) {
+        PackageScanner.scanAndRegister(packageName);
     }
 
     /**
