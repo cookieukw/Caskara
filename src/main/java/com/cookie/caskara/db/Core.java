@@ -72,6 +72,10 @@ public class Core<T> {
     // Annotations Support
     private Long defaultTtlMillis = null;
 
+    public Shell getShell() {
+        return shell;
+    }
+
     public Core(Shell shell, Class<T> clazz) {
         this.shell = shell;
         this.clazz = clazz;

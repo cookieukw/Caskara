@@ -351,7 +351,7 @@ List<PlayerProfile> results = Caskara.query(PlayerProfile.class)
 
 ### 5. `Transaction`
 
-Passed to the lambda in `Caskara.transaction()`. All operations are batched into a single SQL transaction — either all succeed or all are rolled back.
+If you have multiple operations that must succeed or fail together, wrap them in a transaction:
 
 ```java
 Caskara.transaction(tx -> {
@@ -362,6 +362,7 @@ Caskara.transaction(tx -> {
     tx.save("player_1", sender);
     tx.save("player_2", receiver);
 });
+// If any exception is thrown inside the lambda, ALL changes are rolled back automatically!
 ```
 
 | Method                              | Description                          |
@@ -371,7 +372,24 @@ Caskara.transaction(tx -> {
 | `delete(String id, Class<T> clazz)` | Atomically deletes a record.         |
 | `load(String id, Class<T> clazz)`   | Loads within the transaction lock.   |
 
-If any exception is thrown inside the lambda, **all changes are rolled back** and the in-memory cache is cleared.
+### Bulk Operations (High Performance)
+
+If you need to save or delete thousands of entities at once, use the `saveAll` and `deleteAll` helper methods. These automatically wrap your operations in a highly optimized SQL transaction, making mass inserts **up to 1000x faster**.
+
+```java
+List<Player> massivePlayerList = getThousandsOfPlayers();
+
+// Bad: takes several seconds
+for (Player p : massivePlayerList) {
+    Caskara.save(p); 
+}
+
+// Good: takes milliseconds!
+Caskara.saveAll(massivePlayerList);
+
+// You can also bulk delete by IDs:
+Caskara.deleteAll(Player.class, List.of("id1", "id2", "id3"));
+```
 
 ---
 

@@ -1,5 +1,7 @@
 package com.cookie.caskara.db;
 
+import java.time.Duration;
+
 /**
  * A 'Transaction' allows grouping multiple database operations into a single atomic block.
  * "All or nothing" persistence.
@@ -25,6 +27,15 @@ public class Transaction {
     @SuppressWarnings("unchecked")
     public <T> String save(String id, T object) {
         return shell.core((Class<T>) object.getClass()).preserve(id, object);
+    }
+
+    /**
+     * Preserves an object with a TTL (Time To Live) within this transaction.
+     */
+    @SuppressWarnings("unchecked")
+    public <T> String save(T object, Duration ttl) {
+        long millis = (ttl.getSeconds() * 1000L) + (ttl.getNano() / 1000000L);
+        return shell.core((Class<T>) object.getClass()).preserve(null, object, System.currentTimeMillis() + millis);
     }
 
     /**

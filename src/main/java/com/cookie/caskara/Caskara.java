@@ -179,6 +179,46 @@ public class Caskara {
     }
 
     /**
+     * Saves a batch of objects efficiently using a single SQL transaction.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> void saveAll(Iterable<T> objects) {
+        if (objects == null || !objects.iterator().hasNext()) return;
+        T first = objects.iterator().next();
+        core((Class<T>) first.getClass()).getShell().transaction(tx -> {
+            for (T obj : objects) {
+                tx.save(obj);
+            }
+        });
+    }
+
+    /**
+     * Saves a batch of objects efficiently using a single SQL transaction with a TTL.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> void saveAll(Iterable<T> objects, Duration ttl) {
+        if (objects == null || !objects.iterator().hasNext()) return;
+        T first = objects.iterator().next();
+        core((Class<T>) first.getClass()).getShell().transaction(tx -> {
+            for (T obj : objects) {
+                tx.save(obj, ttl);
+            }
+        });
+    }
+
+    /**
+     * Deletes a batch of objects efficiently using a single SQL transaction.
+     */
+    public static <T> void deleteAll(Class<T> clazz, Iterable<String> ids) {
+        if (ids == null || !ids.iterator().hasNext()) return;
+        core(clazz).getShell().transaction(tx -> {
+            for (String id : ids) {
+                tx.delete(id, clazz);
+            }
+        });
+    }
+
+    /**
      * Enables AES-256 encryption for a specific entity type.
      */
     public static <T> void encrypt(Class<T> clazz, String securityKey) {
