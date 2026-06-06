@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 /**
  * Enables SQLite FTS5 (Full-Text Search) for this entity.
- * This allows using {@link Query#search(String)} for ultra-fast text matching.
+ * This allows using {@link com.cookie.caskara.db.Query#search(String)} for ultra-fast text matching.
  * <p>
  * WARNING: This annotation is incompatible with @Encrypted.
  * The FTS5 index requires plaintext JSON to build the search dictionary.

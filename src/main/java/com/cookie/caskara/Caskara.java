@@ -30,7 +30,7 @@ import java.util.function.Function;
 import com.google.gson.JsonObject;
 
 /**
- * Caskara API - Shell & Core Paradigm.
+ * Caskara API - Shell and Core Paradigm.
  * Entry point for managing data shells and cores.
  */
 public class Caskara {
