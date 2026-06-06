@@ -22,6 +22,7 @@ class PackageScannerTest {
 
     @AfterEach
     void teardown() {
+        Caskara.shutdown();
         if (tempDir != null && tempDir.exists()) {
             File[] files = tempDir.listFiles();
             if (files != null) {
