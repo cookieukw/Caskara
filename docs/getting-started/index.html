@@ -1,0 +1,2529 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="High-performance, annotation-based SQLite data engine for Hytale Server Plugins.">
+      
+      
+        <meta name="author" content="Cookie">
+      
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../api-reference/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Getting Started - Caskara</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#caskara-documentation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Caskara" class="md-header__button md-logo" aria-label="Caskara" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Caskara
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Getting Started
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-orange" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/cookie/Caskara" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cookie/Caskara
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../api-reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Caskara" class="md-nav__button md-logo" aria-label="Caskara" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Caskara
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/cookie/Caskara" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cookie/Caskara
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting Started
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Getting Started">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-add-caskara-to-your-mod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Add Caskara to your mod
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-initialize-once-on-plugin-startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Initialize once on plugin startup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auto-scan-package-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-Scan Package (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-define-your-entity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Define your entity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-save-load-query-delete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Save, load, query, delete
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-build-and-deploy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Build and deploy
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-concepts-shell-core" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Concepts: Shell &amp; Core
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Concepts: Shell &amp; Core">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#coret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core\&lt;T>
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-caskara-entry-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Caskara (Entry Point)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Shell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-coret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Core&lt;T&gt;
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-queryt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Query&lt;T&gt;
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ultra-fast-full-text-search-fts5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ultra-Fast Full-Text Search (FTS5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-transaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Transaction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bulk-operations-high-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bulk Operations (High Performance)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-admin-commands-in-game-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Admin Commands (In-Game / Console)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Admin Commands (In-Game / Console)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#background-auto-tasks-vacuum-backup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Background Auto-Tasks (Vacuum &amp; Backup)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Stats
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#aes-256-encryption" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AES-256 Encryption
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="AES-256 Encryption">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-rotation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Rotation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schema-migrations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema Migrations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ttl-time-to-live" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TTL (Time To Live)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#soft-delete-restore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Soft Delete &amp; Restore
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hooks-validators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hooks &amp; Validators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reactive-observers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reactive Observers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automated-backups" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automated Backups
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export-import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Export &amp; Import
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exception-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exception Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-types-best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Types &amp; Best Practices
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Types &amp; Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#supported-types-via-gson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Types (via Gson)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#primary-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Primary Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#no-arg-constructor-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No-arg Constructor Required
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#threading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Threading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Tips
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#when-not-to-use-caskara" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When NOT to Use Caskara
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Project Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting Started
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Getting Started">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-add-caskara-to-your-mod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Add Caskara to your mod
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-initialize-once-on-plugin-startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Initialize once on plugin startup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auto-scan-package-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-Scan Package (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-define-your-entity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Define your entity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-save-load-query-delete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Save, load, query, delete
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-build-and-deploy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Build and deploy
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-concepts-shell-core" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Concepts: Shell &amp; Core
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Concepts: Shell &amp; Core">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#coret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core\&lt;T>
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-caskara-entry-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Caskara (Entry Point)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Shell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-coret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Core&lt;T&gt;
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-queryt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Query&lt;T&gt;
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ultra-fast-full-text-search-fts5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ultra-Fast Full-Text Search (FTS5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-transaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Transaction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bulk-operations-high-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bulk Operations (High Performance)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-admin-commands-in-game-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Admin Commands (In-Game / Console)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Admin Commands (In-Game / Console)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#background-auto-tasks-vacuum-backup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Background Auto-Tasks (Vacuum &amp; Backup)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Stats
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#aes-256-encryption" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AES-256 Encryption
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="AES-256 Encryption">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-rotation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Rotation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schema-migrations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema Migrations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ttl-time-to-live" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TTL (Time To Live)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#soft-delete-restore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Soft Delete &amp; Restore
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hooks-validators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hooks &amp; Validators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reactive-observers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reactive Observers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automated-backups" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automated Backups
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export-import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Export &amp; Import
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exception-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exception Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-types-best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Types &amp; Best Practices
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Types &amp; Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#supported-types-via-gson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Types (via Gson)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#primary-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Primary Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#no-arg-constructor-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No-arg Constructor Required
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#threading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Threading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Tips
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#when-not-to-use-caskara" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When NOT to Use Caskara
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="caskara-documentation">Caskara Documentation</h1>
+<p>Caskara is a <strong>data engine library for Hytale mods</strong>. It wraps SQLite with a JSON-NoSQL-style API, giving you schema-free persistence, ACID transactions, in-memory caching, AES encryption, schema migrations, real-time reactive observers, and performance metrics — all without writing SQL.</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#project-structure">Project Structure</a></li>
+<li><a href="#architecture-overview">Architecture Overview</a></li>
+<li><a href="#getting-started">Getting Started</a></li>
+<li><a href="#core-concepts-shell--core">Core Concepts: Shell &amp; Core</a></li>
+<li><a href="#api-reference">API Reference</a></li>
+<li><a href="#1-caskara-entry-point">Caskara (Entry Point)</a></li>
+<li><a href="#2-shell">Shell</a></li>
+<li><a href="#3-coret">Core\&lt;T&gt;</a></li>
+<li><a href="#4-queryt">Query\&lt;T&gt;</a></li>
+<li><a href="#5-transaction">Transaction</a></li>
+<li><a href="#6-pearlt">Pearl\&lt;T&gt;</a></li>
+<li><a href="#7-stats">Stats</a></li>
+<li><a href="#advanced-features">Advanced Features</a></li>
+<li><a href="#aes-256-encryption">AES-256 Encryption</a></li>
+<li><a href="#schema-migrations">Schema Migrations</a></li>
+<li><a href="#ttl-time-to-live">TTL (Time To Live)</a></li>
+<li><a href="#soft-delete--restore">Soft Delete &amp; Restore</a></li>
+<li><a href="#hooks--validators">Hooks &amp; Validators</a></li>
+<li><a href="#reactive-observers">Reactive Observers</a></li>
+<li><a href="#automated-backups">Automated Backups</a></li>
+<li><a href="#export--import">Export &amp; Import</a></li>
+<li><a href="#exception-hierarchy">Exception Hierarchy</a></li>
+<li><a href="#data-types--best-practices">Data Types &amp; Best Practices</a></li>
+</ol>
+<hr />
+<h2 id="project-structure">Project Structure</h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Caskara/
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── build.gradle                  # Gradle build file; dependencies, deploy task, test config
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── gradle.properties             # Java version property
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── local.properties              # Local overrides (hytale.dir); not committed
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>├── libs/                         # Hytale server JAR (compile-only)
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>├── src/
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│   ├── main/
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│   │   ├── java/com/cookie/caskara/
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│   │   │   ├── Caskara.java               # Main static API entry point
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│   │   │   ├── MainPlugin.java            # Hytale plugin bootstrap
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│   │   │   ├── db/
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│   │   │   │   ├── Shell.java             # Database file/connection manager
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   │   │   │   ├── Core.java              # Type-scoped collection (table equivalent)
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│   │   │   │   ├── Query.java             # Fluent query builder
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│   │   │   │   ├── Transaction.java       # Atomic operation context
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│   │   │   │   ├── Pearl.java             # Async result wrapper
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│   │   │   │   ├── Stats.java             # Performance metrics
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│   │   │   │   └── BackupManager.java     # Scheduled backup utility
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│   │   │   ├── entities/
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>│   │   │   │   ├── User.java              # Example entity: simple user
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>│   │   │   │   ├── PlayerStats.java       # Example entity: nested stats object
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>│   │   │   │   └── FruitBasket.java       # Example entity: collection field
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>│   │   │   └── exceptions/
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>│   │   │       ├── CaskaraException.java  # Base unchecked exception
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>│   │   │       ├── DatabaseException.java # SQL/IO errors
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│   │   │       └── ValidationException.java # Validator rejection
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>│   │   └── resources/                     # (placeholder for mod resources)
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│   └── test/
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>│       └── java/com/cookie/caskara/
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>│           ├── ShellTest.java             # Shell connection &amp; schema tests
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>│           ├── CoreCrudTest.java          # CRUD, TTL, soft-delete, validators
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>│           ├── CoreEncryptionTest.java    # AES encrypt/decrypt roundtrip
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>│           ├── CoreMigrationTest.java     # Schema migration pipeline
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>│           ├── QueryTest.java             # Query builder filter/sort/page
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>│           ├── TransactionTest.java       # ACID commit &amp; rollback
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>│           ├── PearlTest.java             # Async result wrapper behavior
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>│           └── StatsTest.java             # Cache and query metrics
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>├── DOCS.md                       # This file
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>├── README.md                     # Quick-start overview
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>└── API.md                        # Concise API table reference
+</span></code></pre></div>
+<hr />
+<h2 id="architecture-overview">Architecture Overview</h2>
+<p>Caskara uses a <strong>Shell &amp; Core</strong> paradigm:</p>
+<ul>
+<li><strong>Shell</strong> = one SQLite <code>.db</code> file. Manages the JDBC connection, locking, transactions, and exports.</li>
+<li><strong>Core\&lt;T&gt;</strong> = a typed "collection" inside a Shell. Handles serialization, caching, encryption, migrations, hooks, and observers for one specific Java class.</li>
+</ul>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Plugin Code
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    │
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    ▼
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>Caskara (static API)
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    │
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    ├─► Shell (&quot;global/default.db&quot;)
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    │       └─► Core&lt;PlayerData&gt;   ─► LRU Cache ─► Gson (JSON) ─► AES-256 ─► SQLite
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    │       └─► Core&lt;QuestData&gt;    ─► LRU Cache ─► Gson (JSON) ──────────►  SQLite
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    │
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    └─► Shell (&quot;worlds/Orbis/spawn.db&quot;)
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>            └─► Core&lt;ChunkData&gt;   ─► LRU Cache ─► Gson (JSON) ──────────►  SQLite
+</span></code></pre></div>
+<p>All <code>Shell</code> operations are protected by a <code>ReentrantLock</code>. Async operations use <strong>Virtual Threads</strong> (<code>Executors.newVirtualThreadPerTaskExecutor()</code>).</p>
+<hr />
+<h2 id="getting-started">Getting Started</h2>
+<h3 id="1-add-caskara-to-your-mod">1. Add Caskara to your mod</h3>
+<p>Place <code>caskara-x.x.x.jar</code> in your mod's classpath or the Hytale <code>UserData/Mods</code> folder (the <code>deploy</code> Gradle task does this automatically).</p>
+<h3 id="2-initialize-once-on-plugin-startup">2. Initialize once on plugin startup</h3>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">MyPlugin</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">JavaPlugin</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nd">@Override</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="kd">protected</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">setup</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">        </span><span class="c1">// All databases will be stored under this folder</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">        </span><span class="n">Caskara</span><span class="p">.</span><span class="na">init</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">File</span><span class="p">(</span><span class="s">&quot;mods/MyMod/data&quot;</span><span class="p">));</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">}</span>
+</span></code></pre></div>
+<blockquote>
+<p><strong>Important</strong>: <code>Caskara.init()</code> must be called <strong>before</strong> any other Caskara method.</p>
+</blockquote>
+<h3 id="auto-scan-package-recommended">Auto-Scan Package (Recommended)</h3>
+<p>Instead of manually registering every single entity class using <code>Caskara.register(MyClass.class)</code>, you can tell Caskara to scan your mod's package recursively. It will automatically find and register everything marked with <code>@CaskaraEntity</code>.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// Scans com.myhytalemod and registers all @CaskaraEntity classes automatically!</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">scanPackage</span><span class="p">(</span><span class="s">&quot;com.myhytalemod&quot;</span><span class="p">);</span>
+</span></code></pre></div>
+<h3 id="3-define-your-entity">3. Define your entity</h3>
+<p>You can use Caskara annotations to configure entities dynamically.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">com.cookie.caskara.annotations.*</span><span class="p">;</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nd">@CaskaraEntity</span><span class="p">(</span><span class="n">shell</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;players&quot;</span><span class="p">)</span><span class="w"> </span><span class="c1">// Automatically stores in players.db</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nd">@Index</span><span class="p">(</span><span class="s">&quot;level&quot;</span><span class="p">)</span><span class="w">                   </span><span class="c1">// Creates an SQL index for the level field</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nd">@TTL</span><span class="p">(</span><span class="n">minutes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">30</span><span class="p">)</span><span class="w">                </span><span class="c1">// Automatically expires after 30 minutes</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">PlayerProfile</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nd">@Id</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">profileId</span><span class="p">;</span><span class="w">      </span><span class="c1">// @Id overrides the default &quot;id&quot; field name</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">name</span><span class="p">;</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">;</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="n">vip</span><span class="p">;</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">PlayerProfile</span><span class="p">()</span><span class="w"> </span><span class="p">{}</span><span class="w">  </span><span class="c1">// Required by Gson for deserialization</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">PlayerProfile</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">name</span><span class="p">;</span>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">level</span><span class="p">;</span>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="4-save-load-query-delete">4. Save, load, query, delete</h3>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// Save (auto-generates UUID as id)</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">PlayerProfile</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">PlayerProfile</span><span class="p">(</span><span class="s">&quot;Cookie&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">);</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">String</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">save</span><span class="p">(</span><span class="n">p</span><span class="p">);</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1">// Load</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="n">PlayerProfile</span><span class="w"> </span><span class="n">loaded</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">load</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">PlayerProfile</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="c1">// List all</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="n">List</span><span class="o">&lt;</span><span class="n">PlayerProfile</span><span class="o">&gt;</span><span class="w"> </span><span class="n">all</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">list</span><span class="p">(</span><span class="n">PlayerProfile</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="c1">// Update (same id -&gt; overwrites)</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="n">loaded</span><span class="p">.</span><span class="na">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">11</span><span class="p">;</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">save</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">loaded</span><span class="p">);</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="c1">// Delete</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">delete</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">PlayerProfile</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+</span></code></pre></div>
+<h3 id="5-build-and-deploy">5. Build and deploy</h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Compile, package, and deploy to Hytale mods folder</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>./gradlew<span class="w"> </span>jar
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Run tests</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>./gradlew<span class="w"> </span><span class="nb">test</span>
+</span></code></pre></div>
+<hr />
+<h2 id="core-concepts-shell-core">Core Concepts: Shell &amp; Core</h2>
+<h3 id="shell">Shell</h3>
+<p>A <code>Shell</code> maps to one SQLite database file. You can have multiple Shells:</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">Shell</span><span class="w"> </span><span class="n">global</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">shell</span><span class="p">(</span><span class="s">&quot;global&quot;</span><span class="p">);</span><span class="w">     </span><span class="c1">// → global/global.db</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">Shell</span><span class="w"> </span><span class="n">players</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">shell</span><span class="p">(</span><span class="s">&quot;players&quot;</span><span class="p">);</span><span class="w">    </span><span class="c1">// → global/players.db</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">Shell</span><span class="w"> </span><span class="n">world</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">shell</span><span class="p">(</span><span class="n">world</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;data&quot;</span><span class="p">);</span><span class="c1">// → worlds/&lt;name&gt;/data.db</span>
+</span></code></pre></div>
+<p>A Shell holds:</p>
+<ul>
+<li>The JDBC SQLite connection (thread-safe via <code>ReentrantLock</code>)</li>
+<li>A map of <code>Core&lt;?&gt;</code> instances (one per Java class)</li>
+<li>A <code>Stats</code> object tracking performance</li>
+<li>A scheduled cleanup task that purges expired (TTL) records every minute</li>
+</ul>
+<h3 id="coret">Core\&lt;T&gt;</h3>
+<p>A <code>Core&lt;T&gt;</code> is scoped to a single entity type. Its <code>typeName</code> is derived from the simple class name (lowercased). Internally it manages:</p>
+<ul>
+<li>LRU in-memory cache (max 500 entries)</li>
+<li>Before/after save hooks</li>
+<li>Validators</li>
+<li>Encryption/decryption</li>
+<li>Schema migration pipeline</li>
+<li>Reactive observers</li>
+</ul>
+<p>Access a Core via:</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">Core</span><span class="o">&lt;</span><span class="n">PlayerProfile</span><span class="o">&gt;</span><span class="w"> </span><span class="n">core</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">core</span><span class="p">(</span><span class="n">PlayerProfile</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1">// Or from a specific shell:</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">Core</span><span class="o">&lt;</span><span class="n">PlayerProfile</span><span class="o">&gt;</span><span class="w"> </span><span class="n">core</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">shell</span><span class="p">(</span><span class="s">&quot;players&quot;</span><span class="p">).</span><span class="na">core</span><span class="p">(</span><span class="n">PlayerProfile</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+</span></code></pre></div>
+<hr />
+<h2 id="api-reference">API Reference</h2>
+<h3 id="1-caskara-entry-point">1. <code>Caskara</code> (Entry Point)</h3>
+<p>All methods in this class are <strong>static</strong>. They operate on the <strong>default global shell</strong> unless otherwise noted.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Method</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>init(File folder)</code></td>
+<td style="text-align: left;"><strong>Required first call.</strong> Initializes the root data folder.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>shell(String name)</code></td>
+<td style="text-align: left;">Opens (or retrieves) a named global Shell.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>shell()</code></td>
+<td style="text-align: left;">Opens the default global Shell (<code>global/default.db</code>).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>shell(World world, String name)</code></td>
+<td style="text-align: left;">Opens a world-scoped Shell.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>core(Class&lt;T&gt; clazz)</code></td>
+<td style="text-align: left;">Returns the Core for <code>clazz</code> from the default Shell.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>query(Class&lt;T&gt; clazz)</code></td>
+<td style="text-align: left;">Returns a Query builder for <code>clazz</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>save(T object)</code></td>
+<td style="text-align: left;">Saves with auto-generated UUID. Returns the assigned ID.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>save(String id, T object)</code></td>
+<td style="text-align: left;">Saves with a specific ID.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>save(T object, Duration ttl)</code></td>
+<td style="text-align: left;">Saves with a Time-To-Live. The record is auto-deleted after expiry.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>save(T object, long ttlMillis)</code></td>
+<td style="text-align: left;">Same as above using milliseconds.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>saveAsync(T object, long ttlMillis)</code></td>
+<td style="text-align: left;">Non-blocking save with TTL. Returns <code>CompletableFuture&lt;String&gt;</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>load(String id, Class&lt;T&gt; clazz)</code></td>
+<td style="text-align: left;">Loads by ID. Returns <code>null</code> if not found or expired.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>loadAsync(String id, Class&lt;T&gt; clazz)</code></td>
+<td style="text-align: left;">Non-blocking load. Returns <code>CompletableFuture&lt;T&gt;</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>list(Class&lt;T&gt; clazz)</code></td>
+<td style="text-align: left;">Returns a <code>List&lt;T&gt;</code> of all active records of that type.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>delete(String id, Class&lt;T&gt; clazz)</code></td>
+<td style="text-align: left;">Physically deletes the record.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>softDelete(String id, Class&lt;T&gt; clazz)</code></td>
+<td style="text-align: left;">Hides the record without removing it from SQLite.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>restore(String id, Class&lt;T&gt; clazz)</code></td>
+<td style="text-align: left;">Unhides a soft-deleted record.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>transaction(Consumer&lt;Transaction&gt; action)</code></td>
+<td style="text-align: left;">Executes operations atomically on the default Shell.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>stats()</code></td>
+<td style="text-align: left;">Returns the <code>Stats</code> object for the default Shell.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>createIndex(Class&lt;T&gt; clazz, String jsonField)</code></td>
+<td style="text-align: left;">Creates a computed SQL index for faster JSON field queries.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>enableAutoBackup(int intervalMinutes)</code></td>
+<td style="text-align: left;">Schedules periodic <code>.bak</code> file copies of the default Shell.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>exportShell(File file)</code></td>
+<td style="text-align: left;">Dumps all data from the default Shell to a JSON file.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>importShell(File file)</code></td>
+<td style="text-align: left;">Bulk-imports records from a JSON file into the default Shell.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>encrypt(Class&lt;T&gt; clazz, String key)</code></td>
+<td style="text-align: left;">Enables AES-128 encryption for all records of <code>clazz</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>rotateKey(Class&lt;T&gt; clazz, String oldKey, String newKey)</code></td>
+<td style="text-align: left;">Re-encrypts all records of <code>clazz</code> from an old key to a new key.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>migration(Class&lt;T&gt; clazz, int version, Function&lt;JsonObject, JsonObject&gt; fn)</code></td>
+<td style="text-align: left;">Registers a schema migration function.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>getId(Object object)</code></td>
+<td style="text-align: left;">Reflectively reads the <code>id</code>, <code>uuid</code>, or <code>uid</code> field from any object.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="2-shell">2. <code>Shell</code></h3>
+<p><code>Shell</code> is usually accessed indirectly via <code>Caskara.shell(...)</code>. Direct access is useful for multi-shell setups.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">Shell</span><span class="w"> </span><span class="n">playersShell</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">shell</span><span class="p">(</span><span class="s">&quot;players&quot;</span><span class="p">);</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">Core</span><span class="o">&lt;</span><span class="n">PlayerProfile</span><span class="o">&gt;</span><span class="w"> </span><span class="n">core</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">playersShell</span><span class="p">.</span><span class="na">core</span><span class="p">(</span><span class="n">PlayerProfile</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">playersShell</span><span class="p">.</span><span class="na">transaction</span><span class="p">(</span><span class="n">tx</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">});</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">Stats</span><span class="w"> </span><span class="n">stats</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">playersShell</span><span class="p">.</span><span class="na">getStats</span><span class="p">();</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">playersShell</span><span class="p">.</span><span class="na">exportToJson</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">File</span><span class="p">(</span><span class="s">&quot;backup.json&quot;</span><span class="p">));</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">playersShell</span><span class="p">.</span><span class="na">close</span><span class="p">();</span><span class="w"> </span><span class="c1">// important! shuts down connection and scheduler</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Method</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>core(Class&lt;T&gt; clazz)</code></td>
+<td style="text-align: left;">Returns the Core for the specified class.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>transaction(Consumer&lt;Transaction&gt; action)</code></td>
+<td style="text-align: left;">ACID transaction. See <a href="#5-transaction">Transaction</a>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>getStats()</code></td>
+<td style="text-align: left;">Returns the Shell's <code>Stats</code> tracker.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>exportToJson(File file)</code></td>
+<td style="text-align: left;">Exports all records to JSON.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>importFromJson(File file)</code></td>
+<td style="text-align: left;">Imports records from JSON.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>getConnection()</code></td>
+<td style="text-align: left;">Returns the raw JDBC <code>Connection</code> (advanced use only).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>runInLock(Supplier&lt;R&gt; action)</code></td>
+<td style="text-align: left;">Executes an action under the Shell's <code>ReentrantLock</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>close()</code></td>
+<td style="text-align: left;">Closes the JDBC connection. Always call this on plugin shutdown.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="3-coret">3. <code>Core&lt;T&gt;</code></h3>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">Core</span><span class="o">&lt;</span><span class="n">PlayerProfile</span><span class="o">&gt;</span><span class="w"> </span><span class="n">core</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">core</span><span class="p">(</span><span class="n">PlayerProfile</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Method</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>preserve(T element)</code></td>
+<td style="text-align: left;">Saves with auto-UUID. Returns the ID.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>preserve(String id, T element)</code></td>
+<td style="text-align: left;">Saves with a specific ID.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>preserve(String id, T element, Long expiresAtMs)</code></td>
+<td style="text-align: left;">Saves with an absolute expiry timestamp.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>preserveAsync(String id, T element)</code></td>
+<td style="text-align: left;">Non-blocking save. Returns <code>CompletableFuture&lt;String&gt;</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>extract(String id)</code></td>
+<td style="text-align: left;">Loads by ID, returns <code>Pearl&lt;T&gt;</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>extractAll()</code></td>
+<td style="text-align: left;">Returns <code>List&lt;T&gt;</code> of all active, non-expired, non-deleted records.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>discard(String id)</code></td>
+<td style="text-align: left;">Physically deletes the record.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>softDelete(String id)</code></td>
+<td style="text-align: left;">Sets <code>deleted_at</code> timestamp; record is hidden from queries.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>restore(String id)</code></td>
+<td style="text-align: left;">Clears <code>deleted_at</code>; record becomes visible again.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>query()</code></td>
+<td style="text-align: left;">Returns a <code>Query&lt;T&gt;</code> builder for this Core.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>createIndex(String jsonField)</code></td>
+<td style="text-align: left;">Creates a computed SQL index: <code>idx_&lt;type&gt;_&lt;field&gt;</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>setSecurityKey(String key)</code></td>
+<td style="text-align: left;">Enables AES-128 encryption on this Core.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>addValidator(Predicate&lt;T&gt; validator)</code></td>
+<td style="text-align: left;">Throws <code>ValidationException</code> if the predicate returns <code>false</code> on save.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>onBeforeSave(BiConsumer&lt;String, T&gt; hook)</code></td>
+<td style="text-align: left;">Fires before every <code>preserve()</code> call.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>onAfterSave(BiConsumer&lt;String, T&gt; hook)</code></td>
+<td style="text-align: left;">Fires after every successful <code>preserve()</code> call.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>onBeforeDelete(Consumer&lt;String&gt; hook)</code></td>
+<td style="text-align: left;">Fires before every <code>discard()</code> call.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>observe(String id, BiConsumer&lt;String, T&gt; observer)</code></td>
+<td style="text-align: left;">Fires when a specific record is saved or updated.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>observeAll(BiConsumer&lt;String, T&gt; observer)</code></td>
+<td style="text-align: left;">Fires when ANY record of this type is saved or updated.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>registerMigration(int version, Function&lt;JsonObject, JsonObject&gt; fn)</code></td>
+<td style="text-align: left;">Registers a migration applied lazily on next read.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="4-queryt">4. <code>Query&lt;T&gt;</code></h3>
+<p>Fluent builder. Obtained via <code>Caskara.query(Class)</code> or <code>core.query()</code>.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">List</span><span class="o">&lt;</span><span class="n">PlayerProfile</span><span class="o">&gt;</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">query</span><span class="p">(</span><span class="n">PlayerProfile</span><span class="p">.</span><span class="na">class</span><span class="p">)</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="p">.</span><span class="na">field</span><span class="p">(</span><span class="s">&quot;vip&quot;</span><span class="p">,</span><span class="w"> </span><span class="kc">true</span><span class="p">)</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="p">.</span><span class="na">fieldGreaterThan</span><span class="p">(</span><span class="s">&quot;level&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">)</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="p">.</span><span class="na">orderBy</span><span class="p">(</span><span class="s">&quot;level&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">Query</span><span class="p">.</span><span class="na">Order</span><span class="p">.</span><span class="na">DESC</span><span class="p">)</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="p">.</span><span class="na">page</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">)</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="p">.</span><span class="na">fetch</span><span class="p">();</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Method</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>field(String name, Object value)</code></td>
+<td style="text-align: left;">Exact match: <code>json_extract(json, '$.name') = value</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>fieldGreaterThan(String name, Object value)</code></td>
+<td style="text-align: left;">Greater-than comparison on a JSON field.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>fieldLessThan(String name, Object value)</code></td>
+<td style="text-align: left;">Less-than comparison on a JSON field.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>fieldIn(String name, List&lt;Object&gt; values)</code></td>
+<td style="text-align: left;">Matches any value in the list (SQL <code>IN</code>).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>fieldContains(String name, String text)</code></td>
+<td style="text-align: left;">SQL <code>LIKE '%text%'</code> on a JSON string field.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>orderBy(String field, Order direction)</code></td>
+<td style="text-align: left;">Sort by a JSON field. Use <code>Query.Order.ASC</code> or <code>DESC</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>limit(int n)</code></td>
+<td style="text-align: left;">Restrict result count.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>offset(int n)</code></td>
+<td style="text-align: left;">Skip the first <code>n</code> results.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>page(int page, int size)</code></td>
+<td style="text-align: left;">Convenience pagination. <code>page(1, 20)</code> → first 20 results.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>fetch()</code></td>
+<td style="text-align: left;">Executes and returns <code>List&lt;T&gt;</code> (blocking).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>fetchAsync()</code></td>
+<td style="text-align: left;">Non-blocking; returns <code>CompletableFuture&lt;List&lt;T&gt;&gt;</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>fetchFirst()</code></td>
+<td style="text-align: left;">Returns <code>Pearl&lt;T&gt;</code> with the first result.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>search(String text)</code></td>
+<td style="text-align: left;">SQLite FTS5 instant text match across the entire JSON.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ultra-fast-full-text-search-fts5">Ultra-Fast Full-Text Search (FTS5)</h3>
+<p>If you need to search text inside your entities (like chat logs, item names, etc), use the <code>@FullTextSearch</code> annotation on your class. This creates a synchronized FTS5 virtual table under the hood, making <code>.search("text")</code> queries up to <strong>10,000x faster</strong> than using <code>.fieldContains()</code>.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nd">@FullTextSearch</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nd">@CaskaraEntity</span><span class="p">(</span><span class="n">shell</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;chat_logs&quot;</span><span class="p">)</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ChatMessage</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="nd">@Id</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">id</span><span class="p">;</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">text</span><span class="p">;</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="p">}</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="c1">// Searching millions of rows in milliseconds:</span>
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="n">List</span><span class="o">&lt;</span><span class="n">ChatMessage</span><span class="o">&gt;</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">query</span><span class="p">(</span><span class="n">ChatMessage</span><span class="p">.</span><span class="na">class</span><span class="p">).</span><span class="na">search</span><span class="p">(</span><span class="s">&quot;diamond sword&quot;</span><span class="p">).</span><span class="na">fetch</span><span class="p">();</span>
+</span></code></pre></div>
+<blockquote>
+<p><strong>Warning</strong>: <code>@FullTextSearch</code> is incompatible with <code>@Encrypted</code>. FTS5 requires plaintext JSON to build its dictionary index. Caskara will throw an error if both are used.</p>
+</blockquote>
+<p><strong>Performance tip</strong>: Call <code>Caskara.createIndex(MyClass.class, "fieldName")</code> before querying a field repeatedly to get O(1) lookups via a computed SQL index.</p>
+<hr />
+<h3 id="5-transaction">5. <code>Transaction</code></h3>
+<p>If you have multiple operations that must succeed or fail together, wrap them in a transaction:</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">transaction</span><span class="p">(</span><span class="n">tx</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="n">Wallet</span><span class="w"> </span><span class="n">sender</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">tx</span><span class="p">.</span><span class="na">load</span><span class="p">(</span><span class="s">&quot;player_1&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">Wallet</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="n">Wallet</span><span class="w"> </span><span class="n">receiver</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tx</span><span class="p">.</span><span class="na">load</span><span class="p">(</span><span class="s">&quot;player_2&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">Wallet</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="n">sender</span><span class="p">.</span><span class="na">balance</span><span class="w">   </span><span class="o">-=</span><span class="w"> </span><span class="mi">500</span><span class="p">;</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="n">receiver</span><span class="p">.</span><span class="na">balance</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">500</span><span class="p">;</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">    </span><span class="n">tx</span><span class="p">.</span><span class="na">save</span><span class="p">(</span><span class="s">&quot;player_1&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">sender</span><span class="p">);</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">    </span><span class="n">tx</span><span class="p">.</span><span class="na">save</span><span class="p">(</span><span class="s">&quot;player_2&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">receiver</span><span class="p">);</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="p">});</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="c1">// If any exception is thrown inside the lambda, ALL changes are rolled back automatically!</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Method</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>save(T object)</code></td>
+<td style="text-align: left;">Atomically preserves with auto-UUID.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>save(String id, T object)</code></td>
+<td style="text-align: left;">Atomically preserves with given ID.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>delete(String id, Class&lt;T&gt; clazz)</code></td>
+<td style="text-align: left;">Atomically deletes a record.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>load(String id, Class&lt;T&gt; clazz)</code></td>
+<td style="text-align: left;">Loads within the transaction lock.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bulk-operations-high-performance">Bulk Operations (High Performance)</h3>
+<p>If you need to save or delete thousands of entities at once, use the <code>saveAll</code> and <code>deleteAll</code> helper methods. These automatically wrap your operations in a highly optimized SQL transaction, making mass inserts <strong>up to 1000x faster</strong>.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">List</span><span class="o">&lt;</span><span class="n">Player</span><span class="o">&gt;</span><span class="w"> </span><span class="n">massivePlayerList</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">getThousandsOfPlayers</span><span class="p">();</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">saveAll</span><span class="p">(</span><span class="n">massivePlayerList</span><span class="p">);</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1">// Deleting many records simultaneously</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">deleteAll</span><span class="p">(</span><span class="n">Arrays</span><span class="p">.</span><span class="na">asList</span><span class="p">(</span><span class="s">&quot;id1&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;id2&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;id3&quot;</span><span class="p">),</span><span class="w"> </span><span class="n">Player</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+</span></code></pre></div>
+<hr />
+<h2 id="6-admin-commands-in-game-console">6. Admin Commands (In-Game / Console)</h2>
+<p>Caskara comes with a built-in set of commands to manage databases directly from the Hytale game chat or server console. To make these commands available, you simply need to register them during your plugin's <code>setup()</code> method:</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nd">@Override</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="kd">protected</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">setup</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="n">Caskara</span><span class="p">.</span><span class="na">init</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">File</span><span class="p">(</span><span class="s">&quot;mods/MyMod/data&quot;</span><span class="p">));</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span><span class="n">Caskara</span><span class="p">.</span><span class="na">registerCommands</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="na">getCommandRegistry</span><span class="p">());</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>This registers the <code>/caskara</code> command, restricted to the <code>"admin"</code> permission group. </p>
+<h3 id="usage">Usage</h3>
+<ul>
+<li><code>/caskara stats</code>: Prints an aggregated summary of cache hits/misses, queries, and active shell counts across the entire Caskara instance.</li>
+<li><code>/caskara vacuum</code>: Forces SQLite to run <code>VACUUM</code> on all active database shells. This reclaims raw disk space left over by deleted or TTL-expired records.</li>
+<li><code>/caskara backup</code>: Manually triggers an instant backup of all active database shells. The <code>.bak</code> files are saved in a <code>backups</code> directory next to the <code>.db</code> files.</li>
+<li><code>/caskara autobackup &lt;hours&gt;</code>: Changes the interval of the Auto-Backup system dynamically without needing to restart the server. Use <code>0</code> to disable it.</li>
+<li><code>/caskara scan &lt;package&gt;</code>: Manually triggers the Auto-Scanner for the given package name to detect and register <code>@CaskaraEntity</code> classes on-the-fly.</li>
+<li><code>/caskara dump &lt;entity_id&gt;</code>: Searches the global database for an exact ID match. Since JSON outputs can be massive, the raw data is formatted and printed to the <strong>Server Console</strong> (via standard output logs) to avoid flooding your chat window.</li>
+</ul>
+<h3 id="background-auto-tasks-vacuum-backup">Background Auto-Tasks (Vacuum &amp; Backup)</h3>
+<p>By default, when you call <code>Caskara.init()</code>, two automated systems are silently activated in the background:
+1. <strong>Auto-Vacuum</strong>: Runs every <strong>12 hours</strong> to reclaim unused disk space.
+2. <strong>Auto-Backup</strong>: Runs every <strong>1 hour</strong> to safely copy all database files (using SQLite locks to prevent corruption).</p>
+<p>If your server has different needs, you can customize their frequencies or disable them entirely directly via Java:</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1">// Change to run every 24 hours</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">enableAutoVacuum</span><span class="p">(</span><span class="mi">24</span><span class="p">);</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="c1">// Change backups to every 6 hours</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">enableAutoBackup</span><span class="p">(</span><span class="mi">6</span><span class="p">);</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="c1">// Disable completely (0 or negative)</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">enableAutoVacuum</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">enableAutoBackup</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span></code></pre></div>
+<blockquote>
+<p><strong>Note</strong>: Don't forget to call <code>Caskara.shutdown()</code> when your Hytale server stops to cleanly terminate the background executor thread.</p>
+</blockquote>
+<p>// Bad: takes several seconds
+for (Player p : massivePlayerList) {
+    Caskara.save(p); 
+}</p>
+<p>// Good: takes milliseconds!
+Caskara.saveAll(massivePlayerList);</p>
+<p>// You can also bulk delete by IDs:
+Caskara.deleteAll(Player.class, List.of("id1", "id2", "id3"));
+<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>---
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>### 6. `Pearl&lt;T&gt;`
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>Wraps the result of an async or sync data operation. Think of it as a more ergonomic `Optional&lt;CompletableFuture&lt;T&gt;&gt;`.
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a>```java
+</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>Pearl&lt;PlayerProfile&gt; pearl = Caskara.core(PlayerProfile.class).extract(&quot;player-123&quot;);
+</span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>
+</span><span id="__span-17-10"><a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a>// Blocking retrieval (5s timeout)
+</span><span id="__span-17-11"><a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a>Optional&lt;PlayerProfile&gt; opt = pearl.sync();
+</span><span id="__span-17-12"><a id="__codelineno-17-12" name="__codelineno-17-12" href="#__codelineno-17-12"></a>
+</span><span id="__span-17-13"><a id="__codelineno-17-13" name="__codelineno-17-13" href="#__codelineno-17-13"></a>// Non-blocking
+</span><span id="__span-17-14"><a id="__codelineno-17-14" name="__codelineno-17-14" href="#__codelineno-17-14"></a>pearl.async().thenAccept(optProfile -&gt; { ... });
+</span><span id="__span-17-15"><a id="__codelineno-17-15" name="__codelineno-17-15" href="#__codelineno-17-15"></a>
+</span><span id="__span-17-16"><a id="__codelineno-17-16" name="__codelineno-17-16" href="#__codelineno-17-16"></a>// Inline action
+</span><span id="__span-17-17"><a id="__codelineno-17-17" name="__codelineno-17-17" href="#__codelineno-17-17"></a>pearl.ifFound(profile -&gt; System.out.println(&quot;Found: &quot; + profile.name));
+</span><span id="__span-17-18"><a id="__codelineno-17-18" name="__codelineno-17-18" href="#__codelineno-17-18"></a>
+</span><span id="__span-17-19"><a id="__codelineno-17-19" name="__codelineno-17-19" href="#__codelineno-17-19"></a>// Transform result type
+</span><span id="__span-17-20"><a id="__codelineno-17-20" name="__codelineno-17-20" href="#__codelineno-17-20"></a>Pearl&lt;String&gt; namePearl = pearl.map(p -&gt; p.name);
+</span></code></pre></div></p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Method</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>sync()</code></td>
+<td style="text-align: left;">Blocks until result is ready (max 5s). Returns <code>Optional&lt;T&gt;</code>. Throws <code>DatabaseException</code> on failure.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>async()</code></td>
+<td style="text-align: left;">Non-blocking. Returns <code>CompletableFuture&lt;Optional&lt;T&gt;&gt;</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>ifFound(Consumer&lt;T&gt; action)</code></td>
+<td style="text-align: left;">Executes action synchronously if value is present.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>map(Function&lt;T, R&gt; mapper)</code></td>
+<td style="text-align: left;">Transforms the wrapped type. Returns <code>Pearl&lt;R&gt;</code>.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="7-stats">7. <code>Stats</code></h3>
+<p>Tracks internal performance metrics for a Shell.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">Stats</span><span class="w"> </span><span class="n">stats</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">stats</span><span class="p">();</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;Cache hit rate: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">stats</span><span class="p">.</span><span class="na">getCacheHitRate</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&quot;%&quot;</span><span class="p">);</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;Avg query time: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">stats</span><span class="p">.</span><span class="na">getAverageQueryTimeMs</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&quot;ms&quot;</span><span class="p">);</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;Total queries:  &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">stats</span><span class="p">.</span><span class="na">getTotalQueries</span><span class="p">());</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Method</th>
+<th style="text-align: left;">Return Type</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>getCacheHitRate()</code></td>
+<td style="text-align: left;"><code>double</code></td>
+<td style="text-align: left;">Fraction of <code>extract()</code> calls served from LRU cache (0.0–1.0).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>getAverageQueryTimeMs()</code></td>
+<td style="text-align: left;"><code>double</code></td>
+<td style="text-align: left;">Mean SQL query execution time in milliseconds.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>getTotalQueries()</code></td>
+<td style="text-align: left;"><code>long</code></td>
+<td style="text-align: left;">Total number of <code>fetch()</code> calls executed since shell init.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>getCacheHits()</code></td>
+<td style="text-align: left;"><code>long</code></td>
+<td style="text-align: left;">Raw count of cache hits.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>getCacheMisses()</code></td>
+<td style="text-align: left;"><code>long</code></td>
+<td style="text-align: left;">Raw count of cache misses.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="advanced-features">Advanced Features</h2>
+<h3 id="aes-256-encryption">AES-256 Encryption</h3>
+<p>Caskara can store data as AES-encrypted Base64 blobs. The key is derived using SHA-256.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1">// Call before any save operations for that class</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">encrypt</span><span class="p">(</span><span class="n">SecretToken</span><span class="p">.</span><span class="na">class</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;my-super-secret-password&quot;</span><span class="p">);</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1">// From this point, all saves are encrypted, all loads are decrypted automatically</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">save</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">SecretToken</span><span class="p">(</span><span class="s">&quot;discord-bot-token&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;xyzABC123&quot;</span><span class="p">));</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="n">SecretToken</span><span class="w"> </span><span class="n">loaded</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">load</span><span class="p">(</span><span class="s">&quot;my-token&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">SecretToken</span><span class="p">.</span><span class="na">class</span><span class="p">);</span><span class="w"> </span><span class="c1">// decrypted</span>
+</span></code></pre></div>
+<h4 id="key-rotation">Key Rotation</h4>
+<p>If you need to change your encryption key safely without losing data, use the <code>rotateKey</code> method. It loads all existing data with the old key, and rewrites them using the new key:</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">rotateKey</span><span class="p">(</span><span class="n">SecretToken</span><span class="p">.</span><span class="na">class</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;old-password&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;new-stronger-password&quot;</span><span class="p">);</span>
+</span></code></pre></div>
+<blockquote>
+<p><strong>Safety Guarantee</strong>: Caskara gracefully handles data if read with an incorrect key (returning <code>null</code> and logging a warning instead of crashing). However, rewriting data with the wrong key active will overwrite it. Always use <code>rotateKey</code> for smooth transitions.</p>
+</blockquote>
+<hr />
+<h3 id="schema-migrations">Schema Migrations</h3>
+<p>Register migration functions that transform JSON from old schema versions on the fly, the first time an old record is read.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1">// PlayerProfile v1 had no &quot;rank&quot; field. Add it as default &quot;BRONZE&quot; for v1 records.</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">migration</span><span class="p">(</span><span class="n">PlayerProfile</span><span class="p">.</span><span class="na">class</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="n">json</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">json</span><span class="p">.</span><span class="na">has</span><span class="p">(</span><span class="s">&quot;rank&quot;</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">        </span><span class="n">json</span><span class="p">.</span><span class="na">addProperty</span><span class="p">(</span><span class="s">&quot;rank&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;BRONZE&quot;</span><span class="p">);</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">json</span><span class="p">;</span>
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="p">});</span>
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="c1">// Chain multiple migrations:</span>
+</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">migration</span><span class="p">(</span><span class="n">PlayerProfile</span><span class="p">.</span><span class="na">class</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="n">json</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a><span class="w">    </span><span class="c1">// rename field &quot;vip&quot; → &quot;premium&quot;</span>
+</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">json</span><span class="p">.</span><span class="na">has</span><span class="p">(</span><span class="s">&quot;vip&quot;</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-21-13"><a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a><span class="w">        </span><span class="n">json</span><span class="p">.</span><span class="na">addProperty</span><span class="p">(</span><span class="s">&quot;premium&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">json</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="s">&quot;vip&quot;</span><span class="p">).</span><span class="na">getAsBoolean</span><span class="p">());</span>
+</span><span id="__span-21-14"><a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a><span class="w">        </span><span class="n">json</span><span class="p">.</span><span class="na">remove</span><span class="p">(</span><span class="s">&quot;vip&quot;</span><span class="p">);</span>
+</span><span id="__span-21-15"><a id="__codelineno-21-15" name="__codelineno-21-15" href="#__codelineno-21-15"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-21-16"><a id="__codelineno-21-16" name="__codelineno-21-16" href="#__codelineno-21-16"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">json</span><span class="p">;</span>
+</span><span id="__span-21-17"><a id="__codelineno-21-17" name="__codelineno-21-17" href="#__codelineno-21-17"></a><span class="p">});</span>
+</span></code></pre></div>
+<p>Migrations are applied <strong>lazily</strong> — only when a record with an older <code>version</code> is read. The record is then re-saved at the current schema version automatically.</p>
+<hr />
+<h3 id="ttl-time-to-live">TTL (Time To Live)</h3>
+<p>Records can auto-expire after a set duration. A background worker cleans them up every minute.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1">// Expire after 30 minutes</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">save</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">TempBuff</span><span class="p">(</span><span class="s">&quot;fire_resistance&quot;</span><span class="p">),</span><span class="w"> </span><span class="n">Duration</span><span class="p">.</span><span class="na">ofMinutes</span><span class="p">(</span><span class="mi">30</span><span class="p">));</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="c1">// Or in milliseconds</span>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">save</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">TempBuff</span><span class="p">(</span><span class="s">&quot;speed&quot;</span><span class="p">),</span><span class="w"> </span><span class="mi">60_000L</span><span class="p">);</span>
+</span></code></pre></div>
+<p>A record past its expiry is <strong>invisible</strong> to all queries and <code>load()</code> calls, even if not yet physically deleted. The cleanup task physically removes them within ~1 minute.</p>
+<hr />
+<h3 id="soft-delete-restore">Soft Delete &amp; Restore</h3>
+<p>Non-destructive deletion. The data stays in the DB but is filtered out of all results.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">softDelete</span><span class="p">(</span><span class="s">&quot;player-123&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">PlayerProfile</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="c1">// Now: load() returns null, list() excludes it, queries ignore it</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">restore</span><span class="p">(</span><span class="s">&quot;player-123&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">PlayerProfile</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="c1">// Now: record is fully visible again</span>
+</span></code></pre></div>
+<hr />
+<h3 id="hooks-validators">Hooks &amp; Validators</h3>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="n">Core</span><span class="o">&lt;</span><span class="n">PlayerProfile</span><span class="o">&gt;</span><span class="w"> </span><span class="n">core</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">core</span><span class="p">(</span><span class="n">PlayerProfile</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="c1">// Reject invalid data before it reaches the DB</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="n">core</span><span class="p">.</span><span class="na">addValidator</span><span class="p">(</span><span class="n">p</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="na">level</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="na">name</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">!</span><span class="n">p</span><span class="p">.</span><span class="na">name</span><span class="p">.</span><span class="na">isBlank</span><span class="p">());</span>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="c1">// Fire custom logic before every save</span>
+</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="n">core</span><span class="p">.</span><span class="na">onBeforeSave</span><span class="p">((</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="na">name</span><span class="p">.</span><span class="na">trim</span><span class="p">());</span>
+</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a>
+</span><span id="__span-24-9"><a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a><span class="c1">// Fire custom logic after every successful save</span>
+</span><span id="__span-24-10"><a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a><span class="n">core</span><span class="p">.</span><span class="na">onAfterSave</span><span class="p">((</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">AuditLog</span><span class="p">.</span><span class="na">record</span><span class="p">(</span><span class="s">&quot;Saved player: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">id</span><span class="p">));</span>
+</span><span id="__span-24-11"><a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a>
+</span><span id="__span-24-12"><a id="__codelineno-24-12" name="__codelineno-24-12" href="#__codelineno-24-12"></a><span class="c1">// Fire custom logic before a physical delete</span>
+</span><span id="__span-24-13"><a id="__codelineno-24-13" name="__codelineno-24-13" href="#__codelineno-24-13"></a><span class="n">core</span><span class="p">.</span><span class="na">onBeforeDelete</span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">AuditLog</span><span class="p">.</span><span class="na">record</span><span class="p">(</span><span class="s">&quot;Deleted player: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">id</span><span class="p">));</span>
+</span></code></pre></div>
+<p><code>ValidationException</code> is thrown if any validator returns <code>false</code>, preventing the save.</p>
+<hr />
+<h3 id="reactive-observers">Reactive Observers</h3>
+<p>Subscribe to changes on specific records or all records of a type.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="n">Core</span><span class="o">&lt;</span><span class="n">PlayerProfile</span><span class="o">&gt;</span><span class="w"> </span><span class="n">core</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Caskara</span><span class="p">.</span><span class="na">core</span><span class="p">(</span><span class="n">PlayerProfile</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="c1">// Watch a specific player</span>
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="n">core</span><span class="p">.</span><span class="na">observe</span><span class="p">(</span><span class="s">&quot;player-123&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="w">    </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;Player &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&quot; was updated! New level: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="na">level</span><span class="p">);</span>
+</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="p">});</span>
+</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a>
+</span><span id="__span-25-8"><a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a><span class="c1">// Watch all players</span>
+</span><span id="__span-25-9"><a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a><span class="n">core</span><span class="p">.</span><span class="na">observeAll</span><span class="p">((</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-25-10"><a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a><span class="w">    </span><span class="n">Websocket</span><span class="p">.</span><span class="na">broadcast</span><span class="p">(</span><span class="s">&quot;player_updated&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">id</span><span class="p">);</span>
+</span><span id="__span-25-11"><a id="__codelineno-25-11" name="__codelineno-25-11" href="#__codelineno-25-11"></a><span class="p">});</span>
+</span></code></pre></div>
+<p>Observers fire synchronously after every successful <code>preserve()</code>.</p>
+<hr />
+<h3 id="automated-backups">Automated Backups</h3>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1">// Back up every 15 minutes</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">enableAutoBackup</span><span class="p">(</span><span class="mi">15</span><span class="p">);</span>
+</span></code></pre></div>
+<p>Backups are stored as <code>&lt;shellname&gt;.db.&lt;timestamp&gt;.bak</code> in <code>&lt;dataFolder&gt;/backups/</code>. The Shell is locked during the copy to ensure consistency.</p>
+<hr />
+<h3 id="export-import">Export &amp; Import</h3>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1">// Export the entire default shell to JSON</span>
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">exportShell</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">File</span><span class="p">(</span><span class="s">&quot;export.json&quot;</span><span class="p">));</span>
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="c1">// Import records from a JSON file (uses INSERT OR REPLACE)</span>
+</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">importShell</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">File</span><span class="p">(</span><span class="s">&quot;export.json&quot;</span><span class="p">));</span>
+</span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>
+</span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a><span class="c1">// Per-shell:</span>
+</span><span id="__span-27-8"><a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a><span class="n">Caskara</span><span class="p">.</span><span class="na">shell</span><span class="p">(</span><span class="s">&quot;players&quot;</span><span class="p">).</span><span class="na">exportToJson</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">File</span><span class="p">(</span><span class="s">&quot;players_backup.json&quot;</span><span class="p">));</span>
+</span></code></pre></div>
+<p>The JSON format is an array of <code>{id, type, json}</code> objects.</p>
+<hr />
+<h2 id="exception-hierarchy">Exception Hierarchy</h2>
+<p>All exceptions are <strong>unchecked</strong> (extend <code>RuntimeException</code>) so they don't pollute your method signatures. Catch them in critical areas.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>RuntimeException
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>└── CaskaraException          ← Base for all Caskara errors
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>    ├── DatabaseException     ← SQL errors, I/O failures, transaction rollbacks
+</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>    └── ValidationException   ← Thrown when an addValidator() predicate returns false
+</span></code></pre></div>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="w">    </span><span class="n">Caskara</span><span class="p">.</span><span class="na">transaction</span><span class="p">(</span><span class="n">tx</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">});</span>
+</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">DatabaseException</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="w">    </span><span class="n">logger</span><span class="p">.</span><span class="na">error</span><span class="p">(</span><span class="s">&quot;Transaction failed: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="na">getMessage</span><span class="p">(),</span><span class="w"> </span><span class="n">e</span><span class="p">);</span>
+</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">ValidationException</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a><span class="w">    </span><span class="n">player</span><span class="p">.</span><span class="na">sendMessage</span><span class="p">(</span><span class="s">&quot;Invalid data: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="na">getMessage</span><span class="p">());</span>
+</span><span id="__span-29-7"><a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a><span class="p">}</span>
+</span></code></pre></div>
+<hr />
+<h2 id="data-types-best-practices">Data Types &amp; Best Practices</h2>
+<h3 id="supported-types-via-gson">Supported Types (via Gson)</h3>
+<ul>
+<li><strong>Primitives</strong>: <code>int</code>, <code>long</code>, <code>double</code>, <code>boolean</code>, <code>float</code>, etc.</li>
+<li><strong>Strings</strong>: <code>String</code></li>
+<li><strong>Collections</strong>: <code>List&lt;T&gt;</code>, <code>Set&lt;T&gt;</code>, <code>Map&lt;K, V&gt;</code> — serialized automatically</li>
+<li><strong>Nested objects</strong>: Any Java class. Serialized as JSON sub-trees.</li>
+<li><strong>Transient fields</strong>: Fields marked <code>transient</code> are excluded from JSON.</li>
+</ul>
+<h3 id="primary-keys">Primary Keys</h3>
+<p>Caskara auto-discovers the ID by looking for fields named <code>id</code>, <code>uuid</code>, or <code>uid</code> in order. The ID is synced back to the field after <code>preserve()</code>.</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="c1">// Best practice: always include this field</span>
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">id</span><span class="p">;</span>
+</span></code></pre></div>
+<h3 id="no-arg-constructor-required">No-arg Constructor Required</h3>
+<p>Gson needs a default constructor to deserialize JSON back to your class:</p>
+<div class="language-java highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="kd">public</span><span class="w"> </span><span class="nf">PlayerProfile</span><span class="p">()</span><span class="w"> </span><span class="p">{}</span><span class="w">   </span><span class="c1">// ← mandatory!</span>
+</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="kd">public</span><span class="w"> </span><span class="nf">PlayerProfile</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">name</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="threading">Threading</h3>
+<ul>
+<li><strong>Shells</strong> are thread-safe via <code>ReentrantLock</code>. Safe to call from multiple threads.</li>
+<li><strong>Async paths</strong> use Java 21 Virtual Threads (lightweight; no manual thread pool tuning needed).</li>
+<li><strong>Transactions</strong> hold the lock for their full duration — keep them fast and focused.</li>
+</ul>
+<h3 id="performance-tips">Performance Tips</h3>
+<ol>
+<li>Use <code>createIndex()</code> before querying JSON fields repeatedly.</li>
+<li>Prefer <code>extractAll()</code> + in-memory filtering for small datasets rather than many individual <code>load()</code> calls.</li>
+<li>Use <code>loadAsync()</code> / <code>fetchAsync()</code> in event handlers to avoid blocking the server thread.</li>
+<li>Monitor <code>stats().getCacheHitRate()</code> — below 50% may indicate the cache is too small for your dataset.</li>
+</ol>
+<h3 id="when-not-to-use-caskara">When NOT to Use Caskara</h3>
+<ul>
+<li><strong>Large BLOBs</strong> (images, audio): use Hytale's asset pipeline.</li>
+<li><strong>Relational data</strong> with many joins: use raw SQL or a dedicated ORM.</li>
+<li><strong>Multi-server shared state</strong>: use Redis or a dedicated external DB; SQLite is single-writer.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

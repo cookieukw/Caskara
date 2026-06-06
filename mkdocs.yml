@@ -1,4 +1,6 @@
 site_name: Caskara
+docs_dir: docs_src
+site_dir: docs
 site_description: High-performance, annotation-based SQLite data engine for Hytale Server Plugins.
 site_author: Cookie
 repo_url: https://github.com/cookie/Caskara
