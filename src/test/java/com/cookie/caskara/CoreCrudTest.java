@@ -143,6 +143,26 @@ class CoreCrudTest {
         assertEquals(id, p.id, "Player.id field should be synced after preserve");
     }
 
+    @Test
+    @DisplayName("saveAll() processes bulk items efficiently within a transaction")
+    void testBulkSaveAll() {
+        List<Player> players = new java.util.ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            players.add(new Player("BulkPlayer" + i, i));
+        }
+        
+        long start = System.currentTimeMillis();
+        core.getShell().transaction(tx -> {
+            for (Player p : players) tx.save(p);
+        });
+        long end = System.currentTimeMillis();
+        
+        System.out.println("Bulk save took: " + (end - start) + "ms");
+        
+        List<Player> extracted = core.extractAll();
+        assertEquals(100, extracted.size(), "All 100 items should have been saved");
+    }
+
     // --- Entity ---
     static class Player {
         public String id;
@@ -152,9 +172,9 @@ class CoreCrudTest {
         public Player(String name, int level) { this.name = name; this.level = level; }
     }
 
-    static java.io.File createTempDb() {
+    static File createTempDb() {
         try {
-            java.io.File f = java.io.File.createTempFile("caskara-test-", ".db");
+            File f = File.createTempFile("caskara-test-", ".db");
             f.deleteOnExit();
             return f;
         } catch (Exception e) { throw new RuntimeException(e); }

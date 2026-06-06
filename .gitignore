@@ -2,3 +2,6 @@ build
 .gradle
 .idea
 /bin
+.agents
+.venv/
+site/

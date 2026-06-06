@@ -1,27 +1,48 @@
 package com.cookie.caskara.db;
 
+import com.cookie.caskara.annotations.Encrypted;
+import com.cookie.caskara.annotations.FullTextSearch;
+import com.cookie.caskara.annotations.Id;
+import com.cookie.caskara.annotations.Index;
+import com.cookie.caskara.annotations.Indices;
+import com.cookie.caskara.annotations.TTL;
 import com.cookie.caskara.exceptions.DatabaseException;
+import com.cookie.caskara.exceptions.ValidationException;
+
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import com.hypixel.hytale.logger.HytaleLogger;
 
@@ -29,7 +50,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
  * A 'Core' represents a collection of a specific type within a Shell.
  */
 public class Core<T> {
-    private static final com.google.gson.Gson GSON = new com.google.gson.GsonBuilder().serializeNulls().create();
+    private static final Gson GSON = new GsonBuilder().serializeNulls().create();
     private final Shell shell;
     private final Class<T> clazz;
     private final String typeName;
@@ -44,26 +65,103 @@ public class Core<T> {
     });
 
     // Hooks & Validation (Phase 2)
-    private final List<java.util.function.BiConsumer<String, T>> beforeSaveHooks = new ArrayList<>();
-    private final List<java.util.function.BiConsumer<String, T>> afterSaveHooks = new ArrayList<>();
-    private final List<java.util.function.Consumer<String>> beforeDeleteHooks = new ArrayList<>();
-    private final List<java.util.function.Predicate<T>> validators = new ArrayList<>();
+    private final List<BiConsumer<String, T>> beforeSaveHooks = new ArrayList<>();
+    private final List<BiConsumer<String, T>> afterSaveHooks = new ArrayList<>();
+    private final List<Consumer<String>> beforeDeleteHooks = new ArrayList<>();
+    private final List<Predicate<T>> validators = new ArrayList<>();
 
     // Migration System (Phase 6)
-    private final java.util.TreeMap<Integer, java.util.function.Function<com.google.gson.JsonObject, com.google.gson.JsonObject>> migrations = new java.util.TreeMap<>();
+    private final TreeMap<Integer, Function<JsonObject, JsonObject>> migrations = new TreeMap<>();
     private int schemaVersion = 1;
 
     // Reactive Observers (Phase 8 bonus)
-    private final Map<String, List<java.util.function.BiConsumer<String, T>>> listeners = new java.util.concurrent.ConcurrentHashMap<>();
-    private final List<java.util.function.BiConsumer<String, T>> genericListeners = new CopyOnWriteArrayList<>();
+    private final Map<String, List<BiConsumer<String, T>>> listeners = new ConcurrentHashMap<>();
+    private final List<BiConsumer<String, T>> genericListeners = new CopyOnWriteArrayList<>();
 
     // Security (Phase 8 bonus)
     private String securityKey = null;
+
+    // Annotations Support
+    private Long defaultTtlMillis = null;
+    private boolean isFtsEnabled = false;
+
+    public boolean isFtsEnabled() {
+        return isFtsEnabled;
+    }
+
+    public Shell getShell() {
+        return shell;
+    }
 
     public Core(Shell shell, Class<T> clazz) {
         this.shell = shell;
         this.clazz = clazz;
         this.typeName = clazz.getSimpleName().toLowerCase();
+
+        // Parse @TTL
+        TTL ttl = clazz.getAnnotation(TTL.class);
+        if (ttl != null) {
+            this.defaultTtlMillis = (ttl.minutes() * 60_000L) + (ttl.seconds() * 1000L);
+        }
+
+        // Parse @Index and @Indices
+        Index singleIndex = clazz.getAnnotation(Index.class);
+        if (singleIndex != null) {
+            createIndex(singleIndex.value());
+        }
+        Indices multipleIndices = clazz.getAnnotation(Indices.class);
+        if (multipleIndices != null) {
+            for (Index idx : multipleIndices.value()) {
+                createIndex(idx.value());
+            }
+        }
+
+        // Parse @FullTextSearch
+        if (clazz.isAnnotationPresent(FullTextSearch.class)) {
+            if (clazz.isAnnotationPresent(Encrypted.class)) {
+                throw new DatabaseException("Entity " + typeName + " cannot have both @FullTextSearch and @Encrypted. FTS5 requires plaintext JSON.");
+            }
+            this.isFtsEnabled = true;
+            initializeFts();
+        }
+    }
+
+    private void initializeFts() {
+        shell.transaction(tx -> {
+            try {
+                Connection conn = shell.getConnection();
+                try (Statement stmt = conn.createStatement()) {
+                    // Create the external content virtual table globally for the shell
+                    stmt.execute("CREATE VIRTUAL TABLE IF NOT EXISTS fts_elements USING fts5(type UNINDEXED, json, content='elements', content_rowid='rowid')");
+                    
+                    // Check if triggers exist for this specific type
+                    boolean triggersExist = false;
+                    try (ResultSet rs = stmt.executeQuery("SELECT name FROM sqlite_master WHERE type='trigger' AND name='fts_ai_" + typeName + "'")) {
+                        if (rs.next()) {
+                            triggersExist = true;
+                        }
+                    }
+
+                    if (!triggersExist) {
+                        // Create triggers to keep fts_elements in sync with elements ONLY for this type
+                        stmt.execute("CREATE TRIGGER fts_ai_" + typeName + " AFTER INSERT ON elements WHEN new.type = '" + typeName + "' BEGIN " +
+                                     "INSERT INTO fts_elements(rowid, type, json) VALUES (new.rowid, new.type, new.json); END");
+                        
+                        stmt.execute("CREATE TRIGGER fts_ad_" + typeName + " AFTER DELETE ON elements WHEN old.type = '" + typeName + "' BEGIN " +
+                                     "INSERT INTO fts_elements(fts_elements, rowid, type, json) VALUES ('delete', old.rowid, old.type, old.json); END");
+                        
+                        stmt.execute("CREATE TRIGGER fts_au_" + typeName + " AFTER UPDATE ON elements WHEN new.type = '" + typeName + "' BEGIN " +
+                                     "INSERT INTO fts_elements(fts_elements, rowid, type, json) VALUES ('delete', old.rowid, old.type, old.json); " +
+                                     "INSERT INTO fts_elements(rowid, type, json) VALUES (new.rowid, new.type, new.json); END");
+
+                        // Backfill existing data
+                        stmt.execute("INSERT INTO fts_elements(rowid, type, json) SELECT rowid, type, json FROM elements WHERE type = '" + typeName + "'");
+                    }
+                }
+            } catch (SQLException e) {
+                throw new DatabaseException("Failed to initialize FTS5 for " + typeName, e);
+            }
+        });
     }
 
     /**
@@ -85,19 +183,28 @@ public class Core<T> {
         // Sync ID with object fields
         syncId(id, element);
 
+        if (expiresAtMillis == null && defaultTtlMillis != null) {
+            expiresAtMillis = System.currentTimeMillis() + defaultTtlMillis;
+        }
+
+        if (securityKey == null && clazz.isAnnotationPresent(Encrypted.class)) {
+            throw new DatabaseException("Entity " + typeName + " is marked with @Encrypted but no security key was provided via Caskara.encrypt()!");
+        }
+
         // Run validation
-        for (java.util.function.Predicate<T> validator : validators) {
+        for (Predicate<T> validator : validators) {
             if (!validator.test(element)) {
-                throw new com.cookie.caskara.exceptions.ValidationException("Validation failed for entity of type: " + typeName);
+                throw new ValidationException("Validation failed for entity of type: " + typeName);
             }
         }
 
         // Trigger Before Save Hooks
-        for (java.util.function.BiConsumer<String, T> hook : beforeSaveHooks) {
+        for (BiConsumer<String, T> hook : beforeSaveHooks) {
             hook.accept(id, element);
         }
         
         final String finalId = id;
+        final Long finalExpiresAt = expiresAtMillis;
         final int currentVersion = schemaVersion;
         shell.runInLock(() -> {
             String json = encrypt(GSON.toJson(element));
@@ -106,17 +213,17 @@ public class Core<T> {
                 pstmt.setString(1, finalId);
                 pstmt.setString(2, typeName);
                 pstmt.setString(3, json);
-                if (expiresAtMillis != null) {
-                    pstmt.setLong(4, expiresAtMillis);
+                if (finalExpiresAt != null) {
+                    pstmt.setLong(4, finalExpiresAt);
                 } else {
-                    pstmt.setNull(4, java.sql.Types.INTEGER);
+                    pstmt.setNull(4, Types.INTEGER);
                 }
                 pstmt.setInt(5, currentVersion);
                 pstmt.executeUpdate();
                 cache.put(finalId, element);
                 // If this entity has a TTL, evict it from cache immediately so
                 // the next extract() goes to the DB where expires_at is checked.
-                if (expiresAtMillis != null) {
+                if (finalExpiresAt != null) {
                     cache.remove(finalId);
                 }
 
@@ -127,13 +234,13 @@ public class Core<T> {
         });
 
         // Trigger After Save Hooks
-        for (java.util.function.BiConsumer<String, T> hook : afterSaveHooks) {
+        for (BiConsumer<String, T> hook : afterSaveHooks) {
             hook.accept(id, element);
         }
 
         // Trigger Reactive Observers
         genericListeners.forEach(l -> l.accept(finalId, element));
-        List<java.util.function.BiConsumer<String, T>> specific = listeners.get(finalId);
+        List<BiConsumer<String, T>> specific = listeners.get(finalId);
         if (specific != null) {
             specific.forEach(l -> l.accept(finalId, element));
         }
@@ -172,7 +279,7 @@ public class Core<T> {
         shell.getStats().recordCacheMiss();
 
         CompletableFuture<T> future = CompletableFuture.supplyAsync(() -> shell.runInLock(() -> {
-            String sql = "SELECT json, version FROM elements WHERE id = ? AND type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)";
+            String sql = "SELECT json, version, expires_at FROM elements WHERE id = ? AND type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)";
             try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
                 pstmt.setString(1, id);
                 pstmt.setString(2, typeName);
@@ -181,7 +288,9 @@ public class Core<T> {
                     if (rs.next()) {
                         String json = rs.getString("json");
                         int dbVersion = rs.getInt("version");
-                        return applyMigrations(id, json, dbVersion);
+                        long exp = rs.getLong("expires_at");
+                        Long expiresAt = rs.wasNull() ? null : exp;
+                        return applyMigrations(id, json, dbVersion, expiresAt);
                     }
                 }
             } catch (SQLException e) {
@@ -198,7 +307,7 @@ public class Core<T> {
      */
     public void discard(String id) {
         // Trigger Before Delete Hooks
-        for (java.util.function.Consumer<String> hook : beforeDeleteHooks) {
+        for (Consumer<String> hook : beforeDeleteHooks) {
             hook.accept(id);
         }
 
@@ -218,19 +327,19 @@ public class Core<T> {
 
     // Phase 2 Registration Methods
 
-    public void onBeforeSave(java.util.function.BiConsumer<String, T> hook) {
+    public void onBeforeSave(BiConsumer<String, T> hook) {
         this.beforeSaveHooks.add(hook);
     }
 
-    public void onAfterSave(java.util.function.BiConsumer<String, T> hook) {
+    public void onAfterSave(BiConsumer<String, T> hook) {
         this.afterSaveHooks.add(hook);
     }
 
-    public void onBeforeDelete(java.util.function.Consumer<String> hook) {
+    public void onBeforeDelete(Consumer<String> hook) {
         this.beforeDeleteHooks.add(hook);
     }
 
-    public void addValidator(java.util.function.Predicate<T> validator) {
+    public void addValidator(Predicate<T> validator) {
         this.validators.add(validator);
     }
 
@@ -241,10 +350,8 @@ public class Core<T> {
         shell.runInLock(() -> {
             String indexName = "idx_" + typeName + "_" + jsonField.replace(".", "_");
             String sql = "CREATE INDEX IF NOT EXISTS " + indexName + 
-                         " ON elements(json_extract(json, '$.' || ?)) WHERE type = ?";
+                         " ON elements(json_extract(json, '$." + jsonField + "')) WHERE type = '" + typeName + "'";
             try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
-                pstmt.setString(1, jsonField);
-                pstmt.setString(2, typeName);
                 pstmt.execute();
             } catch (SQLException e) {
                 throw new DatabaseException("Failed to create SQL index on field: " + jsonField, e);
@@ -259,7 +366,7 @@ public class Core<T> {
     public List<T> extractAll() {
         return shell.runInLock(() -> {
             List<T> results = new ArrayList<>();
-            String sql = "SELECT id, json, version FROM elements WHERE type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)";
+            String sql = "SELECT id, json, version, expires_at FROM elements WHERE type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)";
             try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
                 pstmt.setString(1, typeName);
                 pstmt.setLong(2, System.currentTimeMillis());
@@ -268,7 +375,9 @@ public class Core<T> {
                         String id = rs.getString("id");
                         String json = rs.getString("json");
                         int dbVersion = rs.getInt("version");
-                        T obj = applyMigrations(id, json, dbVersion);
+                        long exp = rs.getLong("expires_at");
+                        Long expiresAt = rs.wasNull() ? null : exp;
+                        T obj = applyMigrations(id, json, dbVersion, expiresAt);
                         if (obj != null) {
                             results.add(obj);
                         }
@@ -284,7 +393,7 @@ public class Core<T> {
     /**
      * Registers a migration function for a specific version.
      */
-    public void registerMigration(int version, java.util.function.Function<com.google.gson.JsonObject, com.google.gson.JsonObject> migrator) {
+    public void registerMigration(int version, Function<JsonObject, JsonObject> migrator) {
         this.migrations.put(version, migrator);
         if (version > this.schemaVersion) {
             this.schemaVersion = version;
@@ -294,14 +403,14 @@ public class Core<T> {
     /**
      * Subscribes to changes for a specific ID.
      */
-    public void observe(String id, java.util.function.BiConsumer<String, T> observer) {
+    public void observe(String id, BiConsumer<String, T> observer) {
         listeners.computeIfAbsent(id, k -> new CopyOnWriteArrayList<>()).add(observer);
     }
 
     /**
      * Subscribes to all changes for this element type.
      */
-    public void observeAll(java.util.function.BiConsumer<String, T> observer) {
+    public void observeAll(BiConsumer<String, T> observer) {
         genericListeners.add(observer);
     }
 
@@ -344,20 +453,20 @@ public class Core<T> {
         }
     }
 
-    private T applyMigrations(String id, String json, int dbVersion) {
+    private T applyMigrations(String id, String json, int dbVersion, Long expiresAt) {
         json = decrypt(json);
         try {
             if (dbVersion >= schemaVersion) {
                 T obj = GSON.fromJson(json, clazz);
                 syncId(id, obj);
-                cache.put(id, obj);
+                if (expiresAt == null) cache.put(id, obj);
                 return obj;
             }
 
-            com.google.gson.JsonObject jsonObject = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+            JsonObject jsonObject = JsonParser.parseString(json).getAsJsonObject();
             boolean changed = false;
 
-            for (Map.Entry<Integer, java.util.function.Function<com.google.gson.JsonObject, com.google.gson.JsonObject>> entry : migrations.tailMap(dbVersion, false).entrySet()) {
+            for (Map.Entry<Integer, Function<JsonObject, JsonObject>> entry : migrations.tailMap(dbVersion, false).entrySet()) {
                 jsonObject = entry.getValue().apply(jsonObject);
                 changed = true;
             }
@@ -381,7 +490,7 @@ public class Core<T> {
 
             T obj = GSON.fromJson(finalJson, clazz);
             syncId(id, obj);
-            cache.put(id, obj);
+            if (expiresAt == null) cache.put(id, obj);
             return obj;
         } catch (JsonSyntaxException | IllegalStateException e) {
             HytaleLogger.forEnclosingClass().atWarning()
@@ -437,10 +546,31 @@ public class Core<T> {
     }
 
     /**
-     * Injects the ID into fields named 'id', 'uuid', or 'uid' using reflection.
+     * Injects the ID into fields annotated with @Id, or named 'id', 'uuid', or 'uid'.
      */
     private void syncId(String id, T element) {
         if (element == null || id == null) return;
+        
+        boolean synced = false;
+        
+        // 1. Try @Id annotation
+        for (Field field : clazz.getDeclaredFields()) {
+            if (field.isAnnotationPresent(Id.class)) {
+                try {
+                    field.setAccessible(true);
+                    Object current = field.get(element);
+                    if (current == null || (current instanceof String && ((String) current).isEmpty())) {
+                        field.set(element, id);
+                    }
+                    synced = true;
+                    break;
+                } catch (Exception ignored) {}
+            }
+        }
+        
+        if (synced) return;
+
+        // 2. Fallback to name-based conventions
         for (String fName : new String[]{"id", "uuid", "uid"}) {
             try {
                 Field field = clazz.getDeclaredField(fName);
@@ -450,6 +580,7 @@ public class Core<T> {
                 if (current == null || (current instanceof String && ((String) current).isEmpty())) {
                     field.set(element, id);
                 }
+                break;
             } catch (NoSuchFieldException ignored) {
             } catch (Exception e) {
                 // Fail silently for reflection sync

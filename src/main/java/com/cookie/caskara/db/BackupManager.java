@@ -1,19 +1,15 @@
 package com.cookie.caskara.db;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.sql.Statement;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Manages automatic backups for Caskara Shells.
  */
 public class BackupManager {
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private final Shell shell;
+    private final com.cookie.caskara.db.Shell shell;
     private final File backupFolder;
 
     public BackupManager(Shell shell, File backupFolder) {
@@ -25,26 +21,19 @@ public class BackupManager {
     }
 
     /**
-     * Starts automatic backups with a specific interval.
-     */
-    public void startAutoBackup(int intervalMinutes) {
-        scheduler.scheduleAtFixedRate(this::performBackup, intervalMinutes, intervalMinutes, TimeUnit.MINUTES);
-    }
-
-    /**
      * Safely performs a backup by locking the shell and copying the file.
      */
     public void performBackup() {
         shell.runInLock(() -> {
             File source = shell.getFile();
-            String timestamp = java.time.LocalDateTime.now()
-                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String timestamp = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
             File destination = new File(backupFolder, source.getName() + "." + timestamp + ".bak");
-            try {
-                Files.copy(source.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                System.out.println("[Caskara] Backup created: " + destination.getName());
-            } catch (IOException e) {
-                System.err.println("[Caskara] Failed to create backup: " + e.getMessage());
+            try (Statement stmt = shell.getConnection().createStatement()) {
+                stmt.executeUpdate("backup to '" + destination.getAbsolutePath() + "'");
+                System.out.println("[Caskara] Native Backup created safely: " + destination.getName());
+            } catch (Exception e) {
+                System.err.println("[Caskara] Failed to create native backup: " + e.getMessage());
             }
             return null;
         });
