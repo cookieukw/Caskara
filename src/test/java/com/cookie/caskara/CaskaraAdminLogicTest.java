@@ -38,6 +38,7 @@ public class CaskaraAdminLogicTest {
 
     @AfterAll
     public static void cleanup() {
+        Caskara.shutdown();
         for (File f : testDir.listFiles()) {
             f.delete();
         }
