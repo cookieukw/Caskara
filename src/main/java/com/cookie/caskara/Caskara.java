@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -34,7 +35,7 @@ import com.google.gson.JsonObject;
  */
 public class Caskara {
     private static File dataFolder;
-    private static final Map<String, Shell> shells = new HashMap<>();
+    private static final Map<String, Shell> shells = new ConcurrentHashMap<>();
     
     private static ScheduledExecutorService scheduler;
     private static ScheduledFuture<?> autoVacuumTask;
@@ -120,6 +121,7 @@ public class Caskara {
     public static void shutdown() {
         if (scheduler != null) {
             scheduler.shutdownNow();
+            scheduler = null;
         }
         for (Shell shell : shells.values()) {
             try {

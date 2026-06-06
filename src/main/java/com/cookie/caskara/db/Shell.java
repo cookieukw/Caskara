@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -34,7 +35,7 @@ public class Shell {
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final ReentrantLock lock = new ReentrantLock();
     private Connection connection;
-    private final Map<Class<?>, Core<?>> cores = new HashMap<>();
+    private final Map<Class<?>, Core<?>> cores = new ConcurrentHashMap<>();
     private final Stats stats = new Stats();
     private ScheduledExecutorService cleanupScheduler;
 
