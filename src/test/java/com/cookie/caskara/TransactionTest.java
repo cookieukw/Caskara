@@ -5,7 +5,6 @@ import com.cookie.caskara.db.Shell;
 import com.cookie.caskara.exceptions.DatabaseException;
 import org.junit.jupiter.api.*;
 
-import java.io.File;
 
 import static org.junit.jupiter.api.Assertions.*;
 

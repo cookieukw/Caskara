@@ -4,7 +4,6 @@ import com.cookie.caskara.db.Core;
 import com.cookie.caskara.db.Shell;
 import org.junit.jupiter.api.*;
 
-import java.io.File;
 import java.sql.ResultSet;
 import java.sql.Statement;
 

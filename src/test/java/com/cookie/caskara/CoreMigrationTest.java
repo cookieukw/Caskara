@@ -2,11 +2,9 @@ package com.cookie.caskara;
 
 import com.cookie.caskara.db.Core;
 import com.cookie.caskara.db.Shell;
-import com.google.gson.JsonObject;
 import org.junit.jupiter.api.*;
 
 import java.io.File;
-import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
