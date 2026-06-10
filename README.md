@@ -180,13 +180,39 @@ System.out.println("Avg Latency: " + stats.getAverageQueryTimeMs() + "ms");
 - **Relational Complexity**: If your data requires 10+ table joins, use raw SQL.
 - **Global Shared Databases**: For multi-server clusters, use a dedicated external DB.
 
-## Built-in Auto-Backup
-Caskara has a powerful built-in **Auto-Backup System** that automatically backs up all of your databases safely using native SQLite atomic backup APIs. It runs silently in the background every 1 hour.
-- Use `/caskara backup` in-game to trigger an instant global backup.
-- Use `/caskara autobackup <hours>` to change the backup frequency on-the-fly.
+## ⌨️ In-Game Command Suite
+
+Caskara comes with a powerful in-game administrative command (`/caskara`) to manage your databases directly from Hytale:
+
+*   `/caskara stats`: View total databases, cores, memory footprint, hit rates, and disk sizes.
+*   `/caskara vacuum`: Manually trigger a global SQL VACUUM on all connected database shells.
+*   `/caskara backup`: Instantly perform an atomic, thread-safe backup of all databases.
+*   `/caskara autobackup <hours>`: Adjust or disable the Auto-Backup interval on the fly.
+*   `/caskara dump <package_name>`: Export database contents to disk for analysis.
+*   `/caskara scan <package_name>`: Manually scan packages for `@CaskaraEntity` definitions.
+
+### Auto-Backup System
+Caskara has a built-in background scheduler that safely backs up all active SQLite databases without causing locks or database corruption. It runs silently in the background every 1 hour by default.
 
 > [!WARNING]  
 > **Server Owners**: Although Caskara safely backs up your databases, you should **always** include the `global/` and `worlds/` folders in your own OS-level server backups! A broken hard drive or accidental folder deletion will destroy both your databases and Caskara's automatic `.bak` files. Do your own off-site backups!
+
+---
+
+## 📝 Changelog
+
+### [2.0.0] - The Hardening Update
+
+#### ✨ Features
+*   **In-Game Command Suite**: Added the comprehensive `/caskara` command for database administration directly within Hytale.
+*   **Native Atomic Auto-Backups**: Caskara now has a built-in background scheduler that safely backs up all active SQLite databases without causing locks or database corruption (properly handles SQLite WAL mode using native APIs). Enabled by default every 1 hour.
+*   **Auto-Vacuum Scheduler**: Implemented a global background daemon to automatically VACUUM databases (every 12 hours by default) to keep storage footprint small.
+*   **Annotation-Based Configuration**: Entities can now be fully configured via the `@CaskaraEntity` annotation.
+*   **Package Scanning Utility**: Introduced automatic `@CaskaraEntity` registration via `Caskara.scanPackage()`.
+*   **SQLite FTS5 Support**: Ultra-fast full-text search capabilities enabled via the `@FullTextSearch` annotation.
+*   **Bulk Operations**: Implemented high-performance batch save (`saveAll()`) and delete operations using transactions.
+*   **Query Expirations**: `expires_at` is now included in element queries and can be conditionally utilized.
+*   **Java 25 Support**: Bumped the base compilation target in `gradle.properties` to Java 25.
 
 ---
 
