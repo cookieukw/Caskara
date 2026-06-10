@@ -13,7 +13,7 @@ Group #CaskaraAdminOverlay {
         LayoutMode: Left;
         FlexWeight: 1;
         Label #Logo {
-          Text: "🗄";
+          Text: "DB";
           Anchor: (Right: 15);
           Style: (FontSize: 26, TextColor: #FFB000, VerticalAlignment: Center);
         }
@@ -29,7 +29,7 @@ Group #CaskaraAdminOverlay {
           Padding: (Left: 15, Right: 15);
           Background: #FFB000;
           Label {
-            Text: "💾 Backup Now";
+            Text: "Backup Now";
             Style: (TextColor: #222222, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
           }
         }
@@ -38,7 +38,7 @@ Group #CaskaraAdminOverlay {
           Padding: (Left: 15, Right: 15);
           Background: #222222;
           Label {
-            Text: "🧹 Vacuum DB";
+            Text: "Vacuum DB";
             Style: (TextColor: #FFFFFF, HorizontalAlignment: Center, VerticalAlignment: Center);
           }
         }
@@ -62,7 +62,7 @@ Group #CaskaraAdminOverlay {
           Anchor: (Height: 40, Bottom: 8);
           Background: #2A2A2A;
           Label {
-            Text: "📁 global.db";
+            Text: "global.db";
             Anchor: (Left: 15);
             Style: (TextColor: #FFB000, RenderBold: true, HorizontalAlignment: Start, VerticalAlignment: Center);
           }
@@ -71,7 +71,7 @@ Group #CaskaraAdminOverlay {
           Anchor: (Height: 40, Bottom: 8);
           Background: #000000(0);
           Label {
-            Text: "📁 players.db";
+            Text: "players.db";
             Anchor: (Left: 15);
             Style: (TextColor: #BBBBBB, HorizontalAlignment: Start, VerticalAlignment: Center);
           }
@@ -80,7 +80,7 @@ Group #CaskaraAdminOverlay {
           Anchor: (Height: 40, Bottom: 8);
           Background: #000000(0);
           Label {
-            Text: "📁 quests.db";
+            Text: "quests.db";
             Anchor: (Left: 15);
             Style: (TextColor: #BBBBBB, HorizontalAlignment: Start, VerticalAlignment: Center);
           }
@@ -89,7 +89,7 @@ Group #CaskaraAdminOverlay {
           Anchor: (Height: 40, Bottom: 8);
           Background: #000000(0);
           Label {
-            Text: "📁 economy.db";
+            Text: "economy.db";
             Anchor: (Left: 15);
             Style: (TextColor: #BBBBBB, HorizontalAlignment: Start, VerticalAlignment: Center);
           }
@@ -107,7 +107,7 @@ Group #CaskaraAdminOverlay {
           Anchor: (Height: 40);
           Background: #000000(0);
           Label {
-            Text: "🧪 Integrated Tests";
+            Text: "Integrated Tests";
             Anchor: (Left: 15);
             Style: (TextColor: #55FF55, HorizontalAlignment: Start, VerticalAlignment: Center);
           }
@@ -196,7 +196,7 @@ Group #CaskaraAdminOverlay {
         Group #Toolbar {
           Anchor: (Height: 35, Bottom: 15);
           LayoutMode: Left;
-          TextInput #SearchInput {
+          TextField #SearchInput {
             Anchor: (Width: 300, Right: 15);
             Background: #181818;
           }

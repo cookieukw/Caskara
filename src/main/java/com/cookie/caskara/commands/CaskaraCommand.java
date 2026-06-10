@@ -25,11 +25,12 @@ public class CaskaraCommand extends AbstractCommand {
         this.addSubCommand(new AutoBackupCommand());
         this.addSubCommand(new DumpCommand());
         this.addSubCommand(new ScanCommand());
+        this.addSubCommand(new UICommand());
     }
 
     @Override
     protected CompletableFuture<Void> execute(@Nonnull CommandContext ctx) {
-        ctx.sendMessage(Message.raw("Caskara Commands: /caskara <stats|vacuum|backup|autobackup|dump|scan>"));
+        ctx.sendMessage(Message.raw("Caskara Commands: /caskara <ui|stats|vacuum|backup|autobackup|dump|scan>"));
         return CompletableFuture.completedFuture(null);
     }
 
@@ -98,6 +99,20 @@ public class CaskaraCommand extends AbstractCommand {
         @Override protected CompletableFuture<Void> execute(@Nonnull CommandContext ctx) {
             sendResponses(ctx, CaskaraAdminLogic.scanPackage(ctx.get(packageArg)));
             return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    public static class UICommand extends com.hypixel.hytale.server.core.command.system.basecommands.AbstractWorldCommand {
+        public UICommand() { super("ui", "Open Caskara Admin UI"); }
+        @Override protected void execute(@Nonnull CommandContext ctx, com.hypixel.hytale.server.core.universe.world.World world, com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store) {
+            com.hypixel.hytale.server.core.universe.PlayerRef playerRef = ctx.senderAs(com.hypixel.hytale.server.core.universe.PlayerRef.class);
+            if (playerRef != null) {
+                world.execute(() -> {
+                    com.cookie.caskara.ui.CaskaraAdminPage.open(playerRef);
+                });
+            } else {
+                ctx.sendMessage(Message.raw("This command must be executed by a player."));
+            }
         }
     }
 }
