@@ -217,6 +217,18 @@ _Made with ❤️ for the Hytale community._
 
 ## 📝 Changelog
 
+### [2.0.1] - Hotfix & Command Parsing Update
+
+#### 🐛 Bug Fixes
+*   **Command Registration Fix**: Fixed a critical issue where `/caskara` commands were not being registered with the Hytale server during plugin initialization, rendering them inaccessible in-game.
+*   **Command Argument Parsing**: Refactored the monolithic command structure into native Hytale `SubCommand`s. This resolves the parsing error that incorrectly required positional arguments to use flags (e.g., `--target=0`) instead of typing them naturally (e.g., `/caskara autobackup 0`).
+*   **Build System Conflict**: Resolved an implicit dependency conflict in `build.gradle` between the default `jar` task and `shadowJar` that could cause build failures during deployment.
+
+#### 📖 Documentation
+*   **Command Suite Guide**: Updated the documentation to accurately reflect the new in-game command suite architecture.
+
+---
+
 ### [2.0.0] - The Hardening Update
 
 #### ✨ Features
