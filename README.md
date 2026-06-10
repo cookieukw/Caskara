@@ -190,5 +190,4 @@ Caskara has a powerful built-in **Auto-Backup System** that automatically backs 
 
 ---
 
-### Developed for the next generation of Hytale Modding.
-"Data management shouldn't be hard. It should be Caskara."
+_Made with ❤️ for the Hytale community._
