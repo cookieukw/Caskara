@@ -1,0 +1,393 @@
+Group #CaskaraAdminOverlay {
+  LayoutMode: CenterMiddle;
+  Group #Window {
+    Anchor: (Height: 650);
+    LayoutMode: Top;
+    Background: #121212;
+    Group #Header {
+      Anchor: (Height: 65);
+      Padding: (Left: 25, Right: 25);
+      LayoutMode: Left;
+      Background: #1A1A1A;
+      Group #HeaderLeft {
+        LayoutMode: Left;
+        FlexWeight: 1;
+        Label #Logo {
+          Text: "🗄";
+          Anchor: (Right: 15);
+          Style: (FontSize: 26, TextColor: #FFB000, VerticalAlignment: Center);
+        }
+        Label #Title {
+          Text: "Caskara DB Admin";
+          Style: (FontSize: 22, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center);
+        }
+      }
+      Group #HeaderActions {
+        LayoutMode: Right;
+        Button #BtnBackup {
+          Anchor: (Height: 35);
+          Padding: (Left: 15, Right: 15);
+          Background: #FFB000;
+          Label {
+            Text: "💾 Backup Now";
+            Style: (TextColor: #222222, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+          }
+        }
+        Button #BtnVacuum {
+          Anchor: (Height: 35, Right: 12);
+          Padding: (Left: 15, Right: 15);
+          Background: #222222;
+          Label {
+            Text: "🧹 Vacuum DB";
+            Style: (TextColor: #FFFFFF, HorizontalAlignment: Center, VerticalAlignment: Center);
+          }
+        }
+      }
+    }
+    Group #Body {
+      LayoutMode: Left;
+      FlexWeight: 1;
+      Group #Sidebar {
+        Anchor: (Width: 220);
+        Padding: (Top: 25, Bottom: 25, Left: 15, Right: 15);
+        LayoutMode: Top;
+        Background: #161616;
+        Label #ShellsTitle {
+          Text: "DATABASE SHELLS";
+          Anchor: (Bottom: 12);
+          Padding: (Left: 10);
+          Style: (FontSize: 12, TextColor: #BBBBBB, RenderBold: true);
+        }
+        Button #BtnGlobalDb {
+          Anchor: (Height: 40, Bottom: 8);
+          Background: #2A2A2A;
+          Label {
+            Text: "📁 global.db";
+            Anchor: (Left: 15);
+            Style: (TextColor: #FFB000, RenderBold: true, HorizontalAlignment: Start, VerticalAlignment: Center);
+          }
+        }
+        Button #BtnPlayersDb {
+          Anchor: (Height: 40, Bottom: 8);
+          Background: #000000(0);
+          Label {
+            Text: "📁 players.db";
+            Anchor: (Left: 15);
+            Style: (TextColor: #BBBBBB, HorizontalAlignment: Start, VerticalAlignment: Center);
+          }
+        }
+        Button #BtnQuestsDb {
+          Anchor: (Height: 40, Bottom: 8);
+          Background: #000000(0);
+          Label {
+            Text: "📁 quests.db";
+            Anchor: (Left: 15);
+            Style: (TextColor: #BBBBBB, HorizontalAlignment: Start, VerticalAlignment: Center);
+          }
+        }
+        Button #BtnEconomyDb {
+          Anchor: (Height: 40, Bottom: 8);
+          Background: #000000(0);
+          Label {
+            Text: "📁 economy.db";
+            Anchor: (Left: 15);
+            Style: (TextColor: #BBBBBB, HorizontalAlignment: Start, VerticalAlignment: Center);
+          }
+        }
+        Group #Spacer {
+          FlexWeight: 1;
+        }
+        Label #DevTitle {
+          Text: "DEVELOPMENT";
+          Anchor: (Bottom: 12);
+          Padding: (Left: 10);
+          Style: (FontSize: 12, TextColor: #BBBBBB, RenderBold: true);
+        }
+        Button #BtnTests {
+          Anchor: (Height: 40);
+          Background: #000000(0);
+          Label {
+            Text: "🧪 Integrated Tests";
+            Anchor: (Left: 15);
+            Style: (TextColor: #55FF55, HorizontalAlignment: Start, VerticalAlignment: Center);
+          }
+        }
+      }
+      Group #MainContent {
+        Anchor: (Width: 800);
+        Padding: (Full: 30);
+        LayoutMode: Top;
+        FlexWeight: 1;
+        Background: #0D0D0D;
+        Group #StatsBar {
+          Anchor: (Height: 70, Bottom: 30);
+          LayoutMode: Left;
+          Group #StatHitRate {
+            Anchor: (Right: 20);
+            LayoutMode: MiddleCenter;
+            FlexWeight: 1;
+            Background: #181818;
+            Label {
+              Text: "CACHE HIT RATE";
+              Anchor: (Bottom: 8);
+              Style: (FontSize: 13, TextColor: #BBBBBB);
+            }
+            Label {
+              Text: "98.5%";
+              Style: (FontSize: 24, TextColor: #55FF55, RenderBold: true);
+            }
+          }
+          Group #StatMemory {
+            Anchor: (Right: 20);
+            LayoutMode: MiddleCenter;
+            FlexWeight: 1;
+            Background: #181818;
+            Label {
+              Text: "MEMORY USAGE";
+              Anchor: (Bottom: 8);
+              Style: (FontSize: 13, TextColor: #BBBBBB);
+            }
+            Label {
+              Text: "14.2 MB";
+              Style: (FontSize: 24, TextColor: #FFB000, RenderBold: true);
+            }
+          }
+          Group #StatTotal {
+            LayoutMode: MiddleCenter;
+            FlexWeight: 1;
+            Background: #181818;
+            Label {
+              Text: "TOTAL ENTITIES";
+              Anchor: (Bottom: 8);
+              Style: (FontSize: 13, TextColor: #BBBBBB);
+            }
+            Label {
+              Text: "1,402";
+              Style: (FontSize: 24, TextColor: #FFB000, RenderBold: true);
+            }
+          }
+        }
+        Group #ContentHeader {
+          Anchor: (Height: 40, Bottom: 20);
+          LayoutMode: Left;
+          Group #TitleArea {
+            LayoutMode: Left;
+            FlexWeight: 1;
+            Label #ContentTitle {
+              Text: "global.db";
+              Anchor: (Right: 10);
+              Style: (FontSize: 24, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center);
+            }
+            Label #ContentSubtitle {
+              Text: "Managing Core Entities";
+              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
+            }
+          }
+          Button #BtnNewEntry {
+            Anchor: (Height: 35);
+            Padding: (Left: 15, Right: 15);
+            Background: #FFB000;
+            Label {
+              Text: "+ New Entry";
+              Style: (TextColor: #222222, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
+            }
+          }
+        }
+        Group #Toolbar {
+          Anchor: (Height: 35, Bottom: 15);
+          LayoutMode: Left;
+          TextInput #SearchInput {
+            Anchor: (Width: 300, Right: 15);
+            Background: #181818;
+          }
+          Button #BtnFilter {
+            Anchor: (Width: 80);
+            Background: #222222;
+            Label {
+              Text: "Filter";
+              Style: (TextColor: #FFFFFF, HorizontalAlignment: Center, VerticalAlignment: Center);
+            }
+          }
+        }
+        Group #TableContainer {
+          LayoutMode: Top;
+          FlexWeight: 1;
+          Group #TableHeader {
+            Anchor: (Height: 30, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Label {
+              Text: "ENTITY ID";
+              FlexWeight: 3;
+              Style: (FontSize: 13, TextColor: #BBBBBB, RenderBold: true, VerticalAlignment: Center);
+            }
+            Label {
+              Text: "COLLECTION / CLASS";
+              FlexWeight: 3;
+              Style: (FontSize: 13, TextColor: #BBBBBB, RenderBold: true, VerticalAlignment: Center);
+            }
+            Label {
+              Text: "SIZE";
+              FlexWeight: 1;
+              Style: (FontSize: 13, TextColor: #BBBBBB, RenderBold: true, VerticalAlignment: Center);
+            }
+            Label {
+              Text: "TTL";
+              FlexWeight: 1;
+              Style: (FontSize: 13, TextColor: #BBBBBB, RenderBold: true, VerticalAlignment: Center);
+            }
+            Label {
+              Text: "ACTIONS";
+              FlexWeight: 2;
+              Style: (FontSize: 13, TextColor: #BBBBBB, RenderBold: true, HorizontalAlignment: End, VerticalAlignment: Center);
+            }
+          }
+          Group #TableRow1 {
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label {
+              Text: "dragon_boss_01";
+              FlexWeight: 3;
+              Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center);
+            }
+            Label {
+              Text: "com.mod.MobData";
+              FlexWeight: 3;
+              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
+            }
+            Label {
+              Text: "1.2 KB";
+              FlexWeight: 1;
+              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
+            }
+            Label {
+              Text: "Permanent";
+              FlexWeight: 1;
+              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
+            }
+            Group #Row1Actions {
+              LayoutMode: Right;
+              FlexWeight: 2;
+              Button {
+                Anchor: (Top: 0, Bottom: 0, Left: 10, Right: 0);
+                Padding: (Left: 12, Right: 12);
+                Background: #331111;
+                Label {
+                  Text: "Delete";
+                  Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center);
+                }
+              }
+              Button {
+                Anchor: (Height: 30, Right: 10);
+                Padding: (Left: 12, Right: 12);
+                Background: #222222;
+                Label {
+                  Text: "Edit";
+                  Style: (TextColor: #FFFFFF, HorizontalAlignment: Center, VerticalAlignment: Center);
+                }
+              }
+            }
+          }
+          Group #TableRow2 {
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label {
+              Text: "server_config_main";
+              FlexWeight: 3;
+              Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center);
+            }
+            Label {
+              Text: "com.caskara.Config";
+              FlexWeight: 3;
+              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
+            }
+            Label {
+              Text: "0.8 KB";
+              FlexWeight: 1;
+              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
+            }
+            Label {
+              Text: "Permanent";
+              FlexWeight: 1;
+              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
+            }
+            Group #Row2Actions {
+              LayoutMode: Right;
+              FlexWeight: 2;
+              Button {
+                Anchor: (Height: 30, Top: 0, Bottom: 0, Left: 10, Right: 0);
+                Padding: (Left: 12, Right: 12);
+                Background: #331111;
+                Label {
+                  Text: "Delete";
+                  Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center);
+                }
+              }
+              Button {
+                Anchor: (Height: 30, Right: 10);
+                Padding: (Left: 12, Right: 12);
+                Background: #222222;
+                Label {
+                  Text: "Edit";
+                  Style: (TextColor: #FFFFFF, HorizontalAlignment: Center, VerticalAlignment: Center);
+                }
+              }
+            }
+          }
+          Group #TableRow3 {
+            Anchor: (Height: 45);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Center;
+            Background: #181818;
+            Label {
+              Text: "tmp_event_buff";
+              FlexWeight: 3;
+              Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center);
+            }
+            Label {
+              Text: "com.mod.Buff";
+              FlexWeight: 3;
+              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
+            }
+            Label {
+              Text: "0.3 KB";
+              FlexWeight: 1;
+              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
+            }
+            Label {
+              Text: "12 mins";
+              FlexWeight: 1;
+              Style: (FontSize: 14, TextColor: #FFB000, VerticalAlignment: Center);
+            }
+            Group #Row3Actions {
+              LayoutMode: Right;
+              FlexWeight: 2;
+              Button {
+                Anchor: (Height: 30, Right: 10);
+                Padding: (Left: 12, Right: 12);
+                Background: #331111;
+                Label {
+                  Text: "Delete";
+                  Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center);
+                }
+              }
+              Button {
+                Anchor: (Height: 30, Right: 10);
+                Padding: (Left: 12, Right: 12);
+                Background: #222222;
+                Label {
+                  Text: "Edit";
+                  Style: (TextColor: #FFFFFF, HorizontalAlignment: Center, VerticalAlignment: Center);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
