@@ -61,14 +61,11 @@ tasks.named('test') {
     }
 }
 
-// Tarefa de deploy usando o shadowed jar
 tasks.register('deploy', Copy) {
     dependsOn 'shadowJar'
     from tasks.shadowJar.archiveFile
     into "${hytaleHome}/UserData/Mods"
     
-    // Opcional: Renomeia para remover o sufixo "-all" se desejar, mas manteremos o padrão
-    // rename { String fileName -> "caskara.jar" }
     
     doFirst {
         if (!file(hytaleHome).exists()) {
@@ -78,21 +75,15 @@ tasks.register('deploy', Copy) {
     }
 }
 
-// Configuração específica do Shadow para JDBC
 shadowJar {
     archiveFileName.set("Caskara-${project.version}.jar")
-    mergeServiceFiles() // Crítico para drivers JDBC e outras bibliotecas de serviço
+    mergeServiceFiles()
 }
-
-// Garante que o deploy rode após o shadowJar
 tasks.shadowJar.finalizedBy('deploy')
 
-tasks.named("jar") {
-    destinationDirectory.set(file("$projectDir/build/libs"))
-}
-
 tasks.jar {
+    archiveClassifier.set('plain')
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    // Adiciona todos os recursos (incluindo a nova pasta assets) ao JAR
     from sourceSets.main.resources
+    destinationDirectory.set(file("$projectDir/build/libs"))
 }

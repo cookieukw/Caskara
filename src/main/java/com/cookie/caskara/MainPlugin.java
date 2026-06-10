@@ -17,6 +17,8 @@ public class MainPlugin extends JavaPlugin {
         File folder = new File("mods/Caskara/data");
         Caskara.init(folder);
 
+        Caskara.registerCommands(this.getCommandRegistry());
+
         testAdvancedFeatures();
     }
 
