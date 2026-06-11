@@ -10,7 +10,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CaskaraAdminLogic {
 
@@ -31,6 +33,81 @@ public class CaskaraAdminLogic {
                 shellCount, totalQueries, totalHits, totalMisses);
         output.add(msg);
         return output;
+    }
+
+    public static Map<String, String> getGlobalStatsMap() {
+        long totalQueries = 0;
+        long totalHits = 0;
+        long totalMemoryBytes = 0;
+        long totalEntities = 0;
+
+        for (Shell shell : Caskara.getShells().values()) {
+            totalQueries += shell.getStats().getTotalQueries();
+            totalHits += shell.getStats().getCacheHits();
+            if (shell.getFile() != null && shell.getFile().exists()) {
+                totalMemoryBytes += shell.getFile().length();
+            }
+            try {
+                try (Statement stmt = shell.getConnection().createStatement();
+                     ResultSet rs = stmt.executeQuery("SELECT count(*) FROM elements")) {
+                    if (rs.next()) {
+                        totalEntities += rs.getLong(1);
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        double hitRate = totalQueries > 0 ? ((double) totalHits / totalQueries) * 100 : 0.0;
+        double memMB = totalMemoryBytes / 1024.0 / 1024.0;
+
+        Map<String, String> stats = new HashMap<>();
+        stats.put("HitRate", String.format("%.1f%%", hitRate));
+        stats.put("Memory", String.format("%.1f MB", memMB));
+        stats.put("Total", String.valueOf(totalEntities));
+        return stats;
+    }
+
+    public static class EntityData {
+        public String id;
+        public String type;
+        public String size;
+        public String ttl;
+    }
+
+    public static List<EntityData> getShellEntities(String shellName, int offset, int limit) {
+        List<EntityData> list = new ArrayList<>();
+        Shell shell = Caskara.getShells().get(shellName);
+        if (shell == null) return list;
+
+        try {
+            String sql = "SELECT id, type, length(json) as sizeBytes, expires_at FROM elements LIMIT ? OFFSET ?";
+            try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
+                pstmt.setInt(1, limit);
+                pstmt.setInt(2, offset);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        EntityData data = new EntityData();
+                        data.id = rs.getString("id");
+                        data.type = rs.getString("type");
+                        long bytes = rs.getLong("sizeBytes");
+                        data.size = String.format("%.1f KB", bytes / 1024.0);
+                        
+                        long expires = rs.getLong("expires_at");
+                        if (expires == 0 || rs.wasNull()) {
+                            data.ttl = "Permanent";
+                        } else {
+                            long diff = expires - System.currentTimeMillis();
+                            if (diff <= 0) data.ttl = "Expired";
+                            else data.ttl = (diff / 60000) + " mins";
+                        }
+                        list.add(data);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
     }
 
     public static List<String> runVacuum() {

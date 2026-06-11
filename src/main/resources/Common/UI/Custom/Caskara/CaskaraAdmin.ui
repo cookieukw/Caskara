@@ -132,8 +132,8 @@ Group #CaskaraAdminOverlay {
               Anchor: (Bottom: 8);
               Style: (FontSize: 13, TextColor: #BBBBBB);
             }
-            Label {
-              Text: "98.5%";
+            Label #StatHitRateValue {
+              Text: "0.0%";
               Style: (FontSize: 24, TextColor: #55FF55, RenderBold: true);
             }
           }
@@ -147,8 +147,8 @@ Group #CaskaraAdminOverlay {
               Anchor: (Bottom: 8);
               Style: (FontSize: 13, TextColor: #BBBBBB);
             }
-            Label {
-              Text: "14.2 MB";
+            Label #StatMemoryValue {
+              Text: "0.0 MB";
               Style: (FontSize: 24, TextColor: #FFB000, RenderBold: true);
             }
           }
@@ -161,8 +161,8 @@ Group #CaskaraAdminOverlay {
               Anchor: (Bottom: 8);
               Style: (FontSize: 13, TextColor: #BBBBBB);
             }
-            Label {
-              Text: "1,402";
+            Label #StatTotalValue {
+              Text: "0";
               Style: (FontSize: 24, TextColor: #FFB000, RenderBold: true);
             }
           }
@@ -196,7 +196,7 @@ Group #CaskaraAdminOverlay {
         Group #Toolbar {
           Anchor: (Height: 35, Bottom: 15);
           LayoutMode: Left;
-          TextField #SearchInput {
+          Group #SearchArea {
             Anchor: (Width: 300, Right: 15);
             Background: #181818;
           }
@@ -242,147 +242,391 @@ Group #CaskaraAdminOverlay {
               Style: (FontSize: 13, TextColor: #BBBBBB, RenderBold: true, HorizontalAlignment: End, VerticalAlignment: Center);
             }
           }
-          Group #TableRow1 {
+          Group #TableListContainer {
+            LayoutMode: Top;
+            FlexWeight: 1;
+          Group #Row0 {
+            Visible: false;
             Anchor: (Height: 45, Bottom: 8);
             Padding: (Left: 20, Right: 20);
             LayoutMode: Left;
             Background: #181818;
-            Label {
-              Text: "dragon_boss_01";
-              FlexWeight: 3;
-              Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center);
-            }
-            Label {
-              Text: "com.mod.MobData";
-              FlexWeight: 3;
-              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
-            }
-            Label {
-              Text: "1.2 KB";
-              FlexWeight: 1;
-              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
-            }
-            Label {
-              Text: "Permanent";
-              FlexWeight: 1;
-              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
-            }
-            Group #Row1Actions {
-              LayoutMode: Right;
-              FlexWeight: 2;
-              Button {
-                Anchor: (Top: 0, Bottom: 0, Left: 10, Right: 0);
-                Padding: (Left: 12, Right: 12);
-                Background: #331111;
-                Label {
-                  Text: "Delete";
-                  Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center);
-                }
-              }
-              Button {
-                Anchor: (Height: 30, Right: 10);
-                Padding: (Left: 12, Right: 12);
-                Background: #222222;
-                Label {
-                  Text: "Edit";
-                  Style: (TextColor: #FFFFFF, HorizontalAlignment: Center, VerticalAlignment: Center);
-                }
+            Label #LblId0 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType0 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize0 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl0 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel0 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
               }
             }
           }
-          Group #TableRow2 {
+          Group #Row1 {
+            Visible: false;
             Anchor: (Height: 45, Bottom: 8);
             Padding: (Left: 20, Right: 20);
             LayoutMode: Left;
             Background: #181818;
-            Label {
-              Text: "server_config_main";
-              FlexWeight: 3;
-              Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center);
-            }
-            Label {
-              Text: "com.caskara.Config";
-              FlexWeight: 3;
-              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
-            }
-            Label {
-              Text: "0.8 KB";
-              FlexWeight: 1;
-              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
-            }
-            Label {
-              Text: "Permanent";
-              FlexWeight: 1;
-              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
-            }
-            Group #Row2Actions {
-              LayoutMode: Right;
-              FlexWeight: 2;
-              Button {
-                Anchor: (Height: 30, Top: 0, Bottom: 0, Left: 10, Right: 0);
-                Padding: (Left: 12, Right: 12);
-                Background: #331111;
-                Label {
-                  Text: "Delete";
-                  Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center);
-                }
-              }
-              Button {
-                Anchor: (Height: 30, Right: 10);
-                Padding: (Left: 12, Right: 12);
-                Background: #222222;
-                Label {
-                  Text: "Edit";
-                  Style: (TextColor: #FFFFFF, HorizontalAlignment: Center, VerticalAlignment: Center);
-                }
+            Label #LblId1 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType1 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize1 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl1 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel1 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
               }
             }
           }
-          Group #TableRow3 {
-            Anchor: (Height: 45);
+          Group #Row2 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
             Padding: (Left: 20, Right: 20);
-            LayoutMode: Center;
+            LayoutMode: Left;
             Background: #181818;
-            Label {
-              Text: "tmp_event_buff";
-              FlexWeight: 3;
-              Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center);
-            }
-            Label {
-              Text: "com.mod.Buff";
-              FlexWeight: 3;
-              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
-            }
-            Label {
-              Text: "0.3 KB";
-              FlexWeight: 1;
-              Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
-            }
-            Label {
-              Text: "12 mins";
-              FlexWeight: 1;
-              Style: (FontSize: 14, TextColor: #FFB000, VerticalAlignment: Center);
-            }
-            Group #Row3Actions {
-              LayoutMode: Right;
-              FlexWeight: 2;
-              Button {
-                Anchor: (Height: 30, Right: 10);
-                Padding: (Left: 12, Right: 12);
-                Background: #331111;
-                Label {
-                  Text: "Delete";
-                  Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center);
-                }
+            Label #LblId2 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType2 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize2 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl2 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel2 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
               }
-              Button {
-                Anchor: (Height: 30, Right: 10);
-                Padding: (Left: 12, Right: 12);
+            }
+          }
+          Group #Row3 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId3 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType3 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize3 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl3 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel3 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row4 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId4 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType4 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize4 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl4 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel4 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row5 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId5 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType5 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize5 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl5 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel5 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row6 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId6 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType6 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize6 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl6 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel6 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row7 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId7 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType7 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize7 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl7 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel7 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row8 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId8 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType8 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize8 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl8 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel8 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row9 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId9 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType9 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize9 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl9 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel9 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row10 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId10 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType10 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize10 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl10 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel10 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row11 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId11 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType11 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize11 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl11 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel11 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row12 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId12 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType12 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize12 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl12 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel12 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row13 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId13 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType13 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize13 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl13 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel13 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row14 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId14 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType14 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize14 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl14 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel14 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row15 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId15 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType15 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize15 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl15 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel15 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row16 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId16 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType16 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize16 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl16 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel16 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row17 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId17 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType17 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize17 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl17 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel17 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row18 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId18 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType18 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize18 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl18 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel18 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          Group #Row19 {
+            Visible: false;
+            Anchor: (Height: 45, Bottom: 8);
+            Padding: (Left: 20, Right: 20);
+            LayoutMode: Left;
+            Background: #181818;
+            Label #LblId19 { FlexWeight: 3; Style: (FontSize: 15, TextColor: #FFFFFF, RenderBold: true, VerticalAlignment: Center); }
+            Label #LblType19 { FlexWeight: 3; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblSize19 { FlexWeight: 1; Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center); }
+            Label #LblTtl19 { FlexWeight: 1; Style: (FontSize: 14, VerticalAlignment: Center); }
+            Group {
+              LayoutMode: Right; FlexWeight: 2;
+              Button #BtnDel19 {
+                Anchor: (Height: 30, Right: 10); Padding: (Left: 12, Right: 12); Background: #331111;
+                Label { Text: "Delete"; Style: (TextColor: #FF5555, HorizontalAlignment: Center, VerticalAlignment: Center); }
+              }
+            }
+          }
+          }
+          Group #PaginationContainer {
+            Anchor: (Height: 40, Top: 15);
+            LayoutMode: CenterMiddle;
+            Group #PaginationControls {
+              LayoutMode: Left;
+              Button #BtnPrevPage {
+                Anchor: (Height: 30, Right: 15);
+                Padding: (Left: 15, Right: 15);
                 Background: #222222;
-                Label {
-                  Text: "Edit";
-                  Style: (TextColor: #FFFFFF, HorizontalAlignment: Center, VerticalAlignment: Center);
-                }
+                Label { Text: "Prev"; Style: (TextColor: #FFFFFF); }
+              }
+              Label #LblPageIndicator {
+                Text: "Page 1 / 1";
+                Anchor: (Right: 15);
+                Style: (FontSize: 14, TextColor: #BBBBBB, VerticalAlignment: Center);
+              }
+              Button #BtnNextPage {
+                Anchor: (Height: 30);
+                Padding: (Left: 15, Right: 15);
+                Background: #222222;
+                Label { Text: "Next"; Style: (TextColor: #FFFFFF); }
               }
             }
           }
