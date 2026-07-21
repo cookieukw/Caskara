@@ -34,6 +34,7 @@ import com.google.gson.JsonObject;
 public class Caskara {
     private static File dataFolder;
     private static final Map<String, Shell> shells = new ConcurrentHashMap<>();
+    private static String defaultNamespace = "default";
     
     private static ScheduledExecutorService scheduler;
     private static ScheduledFuture<?> autoVacuumTask;
@@ -44,10 +45,12 @@ public class Caskara {
     }
 
     /**
-     * Initializes the Caskara API.
+     * Initializes the Caskara API with a unique namespace per mod.
+     * @param modId The unique identifier of your mod (e.g. "my_awesome_mod").
      * @param folder The root folder for all shells.
      */
-    public static void init(File folder) {
+    public static void init(String modId, File folder) {
+        defaultNamespace = modId;
         dataFolder = folder;
         if (!dataFolder.exists()) {
             dataFolder.mkdirs();
@@ -58,6 +61,17 @@ public class Caskara {
         
         // Enable Auto-Backup by default every 1 hour
         enableAutoBackup(1);
+    }
+
+    /**
+     * Initializes the Caskara API.
+     * @param folder The root folder for all shells.
+     * @deprecated Use {@link #init(String, File)} instead to prevent data conflicts with other mods using "default.db".
+     */
+    @Deprecated
+    public static void init(File folder) {
+        com.hypixel.hytale.logger.HytaleLogger.forEnclosingClass().atWarning().log("Caskara.init(File) is deprecated! Please migrate to Caskara.init(modId, File) to avoid default.db conflicts with other mods.");
+        init("default", folder);
     }
 
     /**
@@ -140,10 +154,10 @@ public class Caskara {
     }
 
     /**
-     * Opens the default global Shell.
+     * Opens the default global Shell for this mod's namespace.
      */
     public static Shell shell() {
-        return shell("default");
+        return shell(defaultNamespace);
     }
 
     /**

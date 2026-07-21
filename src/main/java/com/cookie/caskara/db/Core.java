@@ -1,5 +1,6 @@
 package com.cookie.caskara.db;
 
+import com.cookie.caskara.annotations.Cache;
 import com.cookie.caskara.annotations.Encrypted;
 import com.cookie.caskara.annotations.FullTextSearch;
 import com.cookie.caskara.annotations.Id;
@@ -56,13 +57,8 @@ public class Core<T> {
     private final String typeName;
     
     // Simple LRU Cache (Least Recently Used)
-    private final int MAX_CACHE_SIZE = 500;
-    private final Map<String, T> cache = Collections.synchronizedMap(new LinkedHashMap<>(MAX_CACHE_SIZE, 0.75f, true) {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<String, T> eldest) {
-            return size() > MAX_CACHE_SIZE;
-        }
-    });
+    private int maxCacheSize = 500;
+    private Map<String, T> cache;
 
     // Hooks & Validation (Phase 2)
     private final List<BiConsumer<String, T>> beforeSaveHooks = new ArrayList<>();
@@ -93,10 +89,31 @@ public class Core<T> {
         return shell;
     }
 
+    public void setCacheSize(int newSize) {
+        this.maxCacheSize = newSize;
+        Map<String, T> newCache = Collections.synchronizedMap(new LinkedHashMap<>(newSize, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<String, T> eldest) {
+                return size() > maxCacheSize;
+            }
+        });
+        if (this.cache != null) {
+            newCache.putAll(this.cache);
+        }
+        this.cache = newCache;
+    }
+
     public Core(Shell shell, Class<T> clazz) {
         this.shell = shell;
         this.clazz = clazz;
         this.typeName = clazz.getSimpleName().toLowerCase();
+
+        // Parse @Cache
+        Cache cacheAnn = clazz.getAnnotation(Cache.class);
+        if (cacheAnn != null) {
+            this.maxCacheSize = cacheAnn.maxSize();
+        }
+        setCacheSize(this.maxCacheSize);
 
         // Parse @TTL
         TTL ttl = clazz.getAnnotation(TTL.class);
