@@ -172,6 +172,13 @@ public class Core<T> {
         }
 
         // We only extract this specific 'type'
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            System.err.println("[Caskara] SQLite JDBC driver not found: " + e.getMessage());
+            return;
+        }
+
         try (Connection legacyConn = DriverManager.getConnection("jdbc:sqlite:" + legacyFile.getAbsolutePath());
              PreparedStatement selectStmt = legacyConn.prepareStatement("SELECT * FROM elements WHERE type = ?");
              PreparedStatement deleteStmt = legacyConn.prepareStatement("DELETE FROM elements WHERE type = ?")) {
@@ -192,7 +199,11 @@ public class Core<T> {
                                  insertStmt.setString(3, rs.getString("json"));
                                  insertStmt.setObject(4, rs.getObject("expires_at"));
                                  insertStmt.setObject(5, rs.getObject("deleted_at"));
-                                 insertStmt.setInt(6, rs.getInt("version"));
+                                 int version = rs.getInt("version");
+                                 if (rs.wasNull()) {
+                                     version = 1;
+                                 }
+                                 insertStmt.setInt(6, version);
                                  insertStmt.addBatch();
                              }
                              if (hasData[0]) {
