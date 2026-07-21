@@ -12,14 +12,17 @@ import com.cookie.caskara.exceptions.ValidationException;
 
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -108,6 +111,12 @@ public class Core<T> {
         this.clazz = clazz;
         this.typeName = clazz.getSimpleName().toLowerCase();
 
+
+        // Check if we need to auto-migrate legacy data from default.db
+        if (!shell.getShellFile().getName().equals("default.db")) {
+            autoMigrateLegacyData();
+        }
+
         // Parse @Cache
         Cache cacheAnn = clazz.getAnnotation(Cache.class);
         if (cacheAnn != null) {
@@ -140,6 +149,70 @@ public class Core<T> {
             }
             this.isFtsEnabled = true;
             initializeFts();
+        }
+    }
+    private void autoMigrateLegacyData() {
+        File folder = shell.getShellFile().getParentFile();
+        File legacyFile = new File(folder, "default.db");
+        
+        if (!legacyFile.exists()) {
+            return;
+        }
+
+        // Backup legacy database
+        File backupFile = new File(folder, "default.db.migration.bak");
+        if (!backupFile.exists()) {
+            try {
+                Files.copy(legacyFile.toPath(), backupFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                HytaleLogger.forEnclosingClass().atInfo().log("Created safety backup of legacy default.db before migration.");
+            } catch (Exception e) {
+                System.err.println("[Caskara] Failed to backup legacy database: " + e.getMessage());
+                return; // Abort migration if we can't backup safely
+            }
+        }
+
+        // We only extract this specific 'type'
+        try (Connection legacyConn = DriverManager.getConnection("jdbc:sqlite:" + legacyFile.getAbsolutePath());
+             PreparedStatement selectStmt = legacyConn.prepareStatement("SELECT * FROM elements WHERE type = ?");
+             PreparedStatement deleteStmt = legacyConn.prepareStatement("DELETE FROM elements WHERE type = ?")) {
+             
+             selectStmt.setString(1, this.typeName);
+             
+             try (ResultSet rs = selectStmt.executeQuery()) {
+                 final boolean[] hasData = {false};
+                 // Insert into current shell
+                 shell.transaction(tx -> {
+                     try {
+                         String insertSql = "INSERT OR REPLACE INTO elements (id, type, json, expires_at, deleted_at, version) VALUES (?, ?, ?, ?, ?, ?)";
+                         try (PreparedStatement insertStmt = shell.getConnection().prepareStatement(insertSql)) {
+                             while (rs.next()) {
+                                 hasData[0] = true;
+                                 insertStmt.setString(1, rs.getString("id"));
+                                 insertStmt.setString(2, rs.getString("type"));
+                                 insertStmt.setString(3, rs.getString("json"));
+                                 insertStmt.setObject(4, rs.getObject("expires_at"));
+                                 insertStmt.setObject(5, rs.getObject("deleted_at"));
+                                 insertStmt.setInt(6, rs.getInt("version"));
+                                 insertStmt.addBatch();
+                             }
+                             if (hasData[0]) {
+                                 insertStmt.executeBatch();
+                             }
+                         }
+                     } catch (SQLException e) {
+                         throw new RuntimeException(e);
+                     }
+                 });
+                 
+                 // If we successfully moved data, delete it from the legacy database
+                 if (hasData[0]) {
+                     deleteStmt.setString(1, this.typeName);
+                     deleteStmt.executeUpdate();
+                     HytaleLogger.forEnclosingClass().atInfo().log("Successfully migrated " + this.typeName + " data from legacy default.db to " + shell.getShellFile().getName());
+                 }
+             }
+        } catch (SQLException e) {
+            System.err.println("[Caskara] Failed to auto-migrate legacy data for " + this.typeName + ": " + e.getMessage());
         }
     }
 

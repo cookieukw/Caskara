@@ -49,6 +49,10 @@ public class Shell {
         initConnection();
     }
 
+    public File getShellFile() {
+        return shellFile;
+    }
+
     public Stats getStats() {
         return stats;
     }

@@ -215,6 +215,29 @@ Caskara is engineered to handle **colossal** amounts of data, provided your mod 
 
 ---
 
+## 🔄 Legacy Data Auto-Migration & Safety Backups
+
+### Why the Change?
+Historically, older versions of Caskara used a single database named `default.db` by default. If multiple mods used Caskara on the same Hytale server without custom Shell configurations, they all read and wrote to the same file. This caused severe clashing and namespace conflicts. 
+
+To fix this, version `2.1.0` introduces **Namespace Isolation** via `Caskara.init("my_mod_id", folder)`. However, if you simply rename the file, you would either break other mods or lose your users' existing data.
+
+### How the Auto-Migration Works (Type Extraction)
+Caskara resolves this cleanly and safely using **Type-Based Data Extraction**:
+1. When you initialize your mod with its unique namespace (e.g. `my_mod_id.db`), Caskara detects if the legacy `default.db` still exists in the database directory.
+2. **Safety Backup**: Before touching any data, Caskara automatically duplicates the original legacy database file to `default.db.migration.bak` in the same directory.
+3. **Surgical Extraction**: Instead of moving the whole database (which would steal data belonging to other mods), Caskara opens `default.db`, extracts **only the rows matching the entity classes registered by your mod** (using the `type` column), and moves them into your new, isolated `my_mod_id.db` file.
+4. **Cleanup**: Once copied successfully, it deletes those specific rows from the old `default.db` file. 
+
+*Result:* Your mod gets its isolated database, other legacy mods can still read their own data from `default.db`, and you have a safety backup file (`default.db.migration.bak`) on disk in case you need to rollback.
+
+> [!NOTE]
+> **Who is affected?** This auto-migration ONLY runs for entities that were previously saved in the default global database (`default.db`). If your entities were configured to use custom databases via `@CaskaraEntity(shell = "my_custom_shell")`, they are already isolated and will not trigger or be affected by this migration.
+
+---
+
+---
+
 _Made with ❤️ for the Hytale community._
 
 ---

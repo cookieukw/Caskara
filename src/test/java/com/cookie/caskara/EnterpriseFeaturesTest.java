@@ -104,4 +104,49 @@ public class EnterpriseFeaturesTest {
         // Clean up
         Caskara.shutdown();
     }
+
+    @Test
+    void testAutoMigrationByType() throws Exception {
+        // 1. Manually create a default.db with some legacy data of different types
+        File legacyFile = new File(testFolder, "default.db");
+        Shell legacyShell = new Shell(legacyFile);
+        Core<TinyCacheEntity> legacyCore = new Core<>(legacyShell, TinyCacheEntity.class);
+        legacyCore.preserve("item_1", new TinyCacheEntity("item_1", "legacy_val"));
+        
+        // Also put a dummy entity of another class in default.db to make sure it's NOT stolen
+        // Let's use raw SQL or just another shell write for simulation
+        try (var conn = legacyShell.getConnection();
+             var stmt = conn.prepareStatement("INSERT INTO elements (id, type, json) VALUES ('other_id', 'other_class', '{}')")) {
+            stmt.executeUpdate();
+        }
+        legacyShell.close();
+
+        // 2. Initialize with new namespace "my_new_mod"
+        Caskara.init("my_new_mod", testFolder);
+        Core<TinyCacheEntity> newCore = Caskara.core(TinyCacheEntity.class);
+
+        // 3. Verify that the entity "item_1" was successfully migrated to the new database
+        assertTrue(newCore.extract("item_1").sync().isPresent(), "Legacy data should be migrated");
+        assertEquals("legacy_val", newCore.extract("item_1").sync().get().data);
+
+        // 4. Verify that default.db.migration.bak exists
+        File backupFile = new File(testFolder, "default.db.migration.bak");
+        assertTrue(backupFile.exists(), "Backup of default.db should exist");
+
+        // 5. Verify that 'tinycacheentity' is DELETED from default.db, but 'other_class' remains
+        Shell checkLegacyShell = new Shell(legacyFile);
+        try (var conn = checkLegacyShell.getConnection();
+             var stmt = conn.prepareStatement("SELECT count(*) FROM elements WHERE type = 'tinycacheentity'")) {
+            var rs = stmt.executeQuery();
+            assertTrue(rs.next());
+            assertEquals(0, rs.getInt(1), "Legacy type should be deleted from default.db");
+        }
+        try (var conn = checkLegacyShell.getConnection();
+             var stmt = conn.prepareStatement("SELECT count(*) FROM elements WHERE type = 'other_class'")) {
+            var rs = stmt.executeQuery();
+            assertTrue(rs.next());
+            assertEquals(1, rs.getInt(1), "Other mod's class should remain in default.db");
+        }
+        checkLegacyShell.close();
+    }
 }
