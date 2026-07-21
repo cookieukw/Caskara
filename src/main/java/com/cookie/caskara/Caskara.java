@@ -10,6 +10,7 @@ import com.cookie.caskara.db.Shell;
 import com.cookie.caskara.db.Stats;
 import com.cookie.caskara.db.Transaction;
 import com.cookie.caskara.util.PackageScanner;
+import com.cookie.caskara.utils.CaskaraLogger;
 import com.hypixel.hytale.server.core.command.system.CommandRegistry;
 import com.hypixel.hytale.server.core.universe.world.World;
 import java.io.File;
@@ -70,7 +71,7 @@ public class Caskara {
      */
     @Deprecated
     public static void init(File folder) {
-        com.hypixel.hytale.logger.HytaleLogger.forEnclosingClass().atWarning().log("Caskara.init(File) is deprecated! Please migrate to Caskara.init(modId, File) to avoid default.db conflicts with other mods.");
+        CaskaraLogger.warn("Caskara.init(File) is deprecated! Please migrate to Caskara.init(modId, File) to avoid default.db conflicts with other mods.");
         init("default", folder);
     }
 

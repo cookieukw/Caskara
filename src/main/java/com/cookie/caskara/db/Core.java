@@ -48,7 +48,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
-import com.hypixel.hytale.logger.HytaleLogger;
+import com.cookie.caskara.utils.CaskaraLogger;
 
 /**
  * A 'Core' represents a collection of a specific type within a Shell.
@@ -164,7 +164,7 @@ public class Core<T> {
         if (!backupFile.exists()) {
             try {
                 Files.copy(legacyFile.toPath(), backupFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                HytaleLogger.forEnclosingClass().atInfo().log("Created safety backup of legacy default.db before migration.");
+                CaskaraLogger.info("Created safety backup of legacy default.db before migration.");
             } catch (Exception e) {
                 System.err.println("[Caskara] Failed to backup legacy database: " + e.getMessage());
                 return; // Abort migration if we can't backup safely
@@ -219,7 +219,7 @@ public class Core<T> {
                  if (hasData[0]) {
                      deleteStmt.setString(1, this.typeName);
                      deleteStmt.executeUpdate();
-                     HytaleLogger.forEnclosingClass().atInfo().log("Successfully migrated " + this.typeName + " data from legacy default.db to " + shell.getShellFile().getName());
+                     CaskaraLogger.info("Successfully migrated " + this.typeName + " data from legacy default.db to " + shell.getShellFile().getName());
                  }
              }
         } catch (SQLException e) {
@@ -620,8 +620,7 @@ public class Core<T> {
             if (expiresAt == null) cache.put(id, obj);
             return obj;
         } catch (JsonSyntaxException | IllegalStateException e) {
-            HytaleLogger.forEnclosingClass().atWarning()
-                .log("Caskara: Failed to read element ID " + id + " of type " + typeName + 
+            CaskaraLogger.warn("Caskara: Failed to read element ID " + id + " of type " + typeName + 
                      ". The data might be corrupted or an incorrect encryption key was used.");
             // Ignore the error when trying to read encrypted JSON as plain text (when the security key was not set)
             return null;
