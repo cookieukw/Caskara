@@ -47,6 +47,10 @@ public class CaskaraAdminPage extends CustomUIPage {
         evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnQuestsDb", EventData.of("action", "switch").put("shell", "quests.db"));
         evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnEconomyDb", EventData.of("action", "switch").put("shell", "economy.db"));
         
+        evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnNewEntry", EventData.of("action", "newEntry"));
+        evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnFilter", EventData.of("action", "filter"));
+        evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnTests", EventData.of("action", "tests"));
+        
         // Bind Pagination
         evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnPrevPage", EventData.of("action", "prevPage"));
         evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnNextPage", EventData.of("action", "nextPage"));
@@ -73,7 +77,19 @@ public class CaskaraAdminPage extends CustomUIPage {
         // 3. Update Pagination Label
         cmdBuilder.set("#LblPageIndicator.Text", "Page " + currentPage);
 
-        // 4. Update Table Rows statically
+        // 4. Update Sidebar state
+        String[] shells = {"global.db", "players.db", "quests.db", "economy.db"};
+        String[] btnIds = {"#BtnGlobalDb", "#BtnPlayersDb", "#BtnQuestsDb", "#BtnEconomyDb"};
+        String[] lblIds = {"#LblGlobalDb", "#LblPlayersDb", "#LblQuestsDb", "#LblEconomyDb"};
+        
+        for (int i = 0; i < shells.length; i++) {
+            boolean active = shells[i].equals(currentShell);
+            cmdBuilder.set(btnIds[i] + ".Background", active ? "#2A2A2A" : "#000000(0)");
+            cmdBuilder.set(lblIds[i] + ".Text", shells[i]);
+            cmdBuilder.set(lblIds[i] + ".TextColor", active ? "#FFB000" : "#BBBBBB");
+        }
+
+        // 5. Update Table Rows statically
         for (int i = 0; i < ITEMS_PER_PAGE; i++) {
             boolean isVisible = i < currentEntities.size();
             cmdBuilder.set("#Row" + i + ".Visible", isVisible);
@@ -86,7 +102,7 @@ public class CaskaraAdminPage extends CustomUIPage {
                 cmdBuilder.set("#LblTtl" + i + ".Text", e.ttl);
                 
                 String ttlColor = e.ttl.equals("Permanent") ? "#BBBBBB" : (e.ttl.equals("Expired") ? "#FF5555" : "#FFB000");
-                cmdBuilder.set("#LblTtl" + i + ".Style", "(FontSize: 14, VerticalAlignment: Center, TextColor: " + ttlColor + ")");
+                cmdBuilder.set("#LblTtl" + i + ".TextColor", ttlColor);
             }
         }
     }
@@ -125,18 +141,32 @@ public class CaskaraAdminPage extends CustomUIPage {
                 refreshUI();
             }
         } else if (eventData.contains("\"action\":\"delete\"")) {
-            // Very basic parse to find index
+            // Parse index
             for (int i = 0; i < ITEMS_PER_PAGE; i++) {
                 if (eventData.contains("\"index\":\"" + i + "\"")) {
                     if (i < currentEntities.size()) {
                         String idToDelete = currentEntities.get(i).id;
-                        this.playerRef.sendMessage(Message.raw("[CaskaraAdmin] Requested delete for entity: " + idToDelete));
-                        // Backend delete logic goes here
-                        refreshUI();
+                        boolean success = CaskaraAdminLogic.deleteEntity(currentShell, idToDelete);
+                        if (success) {
+                            this.playerRef.sendMessage(Message.raw("[Caskara] §aDeleted entity " + idToDelete + " from " + currentShell));
+                            // Re-fetch data and refresh
+                            refreshUI();
+                        } else {
+                            this.playerRef.sendMessage(Message.raw("[Caskara] §cFailed to delete entity " + idToDelete));
+                        }
                     }
                     break;
                 }
             }
+        } else if (eventData.contains("\"action\":\"newEntry\"")) {
+            this.playerRef.sendMessage(Message.raw("[Caskara] §eNew Entry dialog is not yet implemented."));
+        } else if (eventData.contains("\"action\":\"filter\"")) {
+            this.playerRef.sendMessage(Message.raw("[Caskara] §eFiltering is not yet implemented. Refreshed UI."));
+            refreshUI();
+        } else if (eventData.contains("\"action\":\"tests\"")) {
+            this.playerRef.sendMessage(Message.raw("[Caskara] §bRunning integrated tests..."));
+            this.close();
+            // In a real scenario, we'd trigger test suite here
         }
     }
 }

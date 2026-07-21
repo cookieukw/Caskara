@@ -36,14 +36,14 @@ public class CaskaraAdminLogic {
     }
 
     public static Map<String, String> getGlobalStatsMap() {
-        long totalQueries = 0;
         long totalHits = 0;
+        long totalMisses = 0;
         long totalMemoryBytes = 0;
         long totalEntities = 0;
 
         for (Shell shell : Caskara.getShells().values()) {
-            totalQueries += shell.getStats().getTotalQueries();
             totalHits += shell.getStats().getCacheHits();
+            totalMisses += shell.getStats().getCacheMisses();
             if (shell.getFile() != null && shell.getFile().exists()) {
                 totalMemoryBytes += shell.getFile().length();
             }
@@ -57,7 +57,8 @@ public class CaskaraAdminLogic {
             } catch (Exception ignored) {}
         }
 
-        double hitRate = totalQueries > 0 ? ((double) totalHits / totalQueries) * 100 : 0.0;
+        long totalAccesses = totalHits + totalMisses;
+        double hitRate = totalAccesses > 0 ? ((double) totalHits / totalAccesses) * 100 : 0.0;
         double memMB = totalMemoryBytes / 1024.0 / 1024.0;
 
         Map<String, String> stats = new HashMap<>();
@@ -76,12 +77,25 @@ public class CaskaraAdminLogic {
 
     public static List<EntityData> getShellEntities(String shellName, int offset, int limit) {
         List<EntityData> list = new ArrayList<>();
-        Shell shell = Caskara.getShells().get(shellName);
-        if (shell == null) return list;
+        Shell targetShell = null;
+        System.out.println("[CaskaraAdmin] Requested shell: " + shellName);
+        for (Shell s : Caskara.getShells().values()) {
+            if (s.getFile() != null) {
+                System.out.println("[CaskaraAdmin] Checking shell file: " + s.getFile().getName());
+                if (s.getFile().getName().equals(shellName)) {
+                    targetShell = s;
+                    break;
+                }
+            }
+        }
+        if (targetShell == null) {
+            System.out.println("[CaskaraAdmin] targetShell is NULL for " + shellName);
+            return list;
+        }
 
         try {
             String sql = "SELECT id, type, length(json) as sizeBytes, expires_at FROM elements LIMIT ? OFFSET ?";
-            try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
+            try (PreparedStatement pstmt = targetShell.getConnection().prepareStatement(sql)) {
                 pstmt.setInt(1, limit);
                 pstmt.setInt(2, offset);
                 try (ResultSet rs = pstmt.executeQuery()) {
@@ -89,6 +103,9 @@ public class CaskaraAdminLogic {
                         EntityData data = new EntityData();
                         data.id = rs.getString("id");
                         data.type = rs.getString("type");
+                        if (data.type == null) data.type = "Unknown";
+                        if (data.id == null) data.id = "null";
+                        
                         long bytes = rs.getLong("sizeBytes");
                         data.size = String.format("%.1f KB", bytes / 1024.0);
                         
@@ -105,9 +122,31 @@ public class CaskaraAdminLogic {
                 }
             }
         } catch (Exception e) {
+            System.err.println("[CaskaraAdmin] SQL Error in getShellEntities:");
             e.printStackTrace();
         }
+        System.out.println("[CaskaraAdmin] Returning " + list.size() + " entities.");
         return list;
+    }
+
+    public static boolean deleteEntity(String shellName, String id) {
+        Shell targetShell = null;
+        for (Shell s : Caskara.getShells().values()) {
+            if (s.getFile() != null && s.getFile().getName().equals(shellName)) {
+                targetShell = s;
+                break;
+            }
+        }
+        if (targetShell == null) return false;
+        try {
+            try (PreparedStatement pstmt = targetShell.getConnection().prepareStatement("DELETE FROM elements WHERE id = ?")) {
+                pstmt.setString(1, id);
+                return pstmt.executeUpdate() > 0;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     public static List<String> runVacuum() {
