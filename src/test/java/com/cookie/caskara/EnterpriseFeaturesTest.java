@@ -107,8 +107,10 @@ public class EnterpriseFeaturesTest {
 
     @Test
     void testAutoMigrationByType() throws Exception {
-        // 1. Manually create a default.db with some legacy data of different types
-        File legacyFile = new File(testFolder, "default.db");
+        // 1. Manually create a default.db in the 'global' subdirectory of testFolder
+        File globalDir = new File(testFolder, "global");
+        globalDir.mkdirs();
+        File legacyFile = new File(globalDir, "default.db");
         Shell legacyShell = new Shell(legacyFile);
         Core<TinyCacheEntity> legacyCore = new Core<>(legacyShell, TinyCacheEntity.class);
         legacyCore.preserve("item_1", new TinyCacheEntity("item_1", "legacy_val"));
@@ -130,7 +132,7 @@ public class EnterpriseFeaturesTest {
         assertEquals("legacy_val", newCore.extract("item_1").sync().get().data);
 
         // 4. Verify that default.db.migration.bak exists
-        File backupFile = new File(testFolder, "default.db.migration.bak");
+        File backupFile = new File(globalDir, "default.db.migration.bak");
         assertTrue(backupFile.exists(), "Backup of default.db should exist");
 
         // 5. Verify that 'tinycacheentity' is DELETED from default.db, but 'other_class' remains
