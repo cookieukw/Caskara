@@ -270,12 +270,38 @@ public class Core<T> {
     }
 
     public CompletableFuture<String> preserveAsync(String id, T element) {
-        return CompletableFuture.supplyAsync(() -> preserve(id, element), shell.getExecutor());
+        return preserveAsync(id, element, 0L);
     }
 
     public CompletableFuture<String> preserveAsync(String id, T element, long ttlMillis) {
-        long expiresAt = System.currentTimeMillis() + ttlMillis;
-        return CompletableFuture.supplyAsync(() -> preserve(id, element, expiresAt), shell.getExecutor());
+        Long expiresAtMillis = ttlMillis > 0 ? System.currentTimeMillis() + ttlMillis : null;
+        String finalId = (id == null || id.isEmpty()) ? UUID.randomUUID().toString() : id;
+        syncId(finalId, element);
+        
+        CompletableFuture<String> future = new CompletableFuture<>();
+        shell.enqueueWrite(() -> {
+            try {
+                // By calling preserve with finalId, it avoids generating a new UUID.
+                preserve(finalId, element, expiresAtMillis);
+                future.complete(finalId);
+            } catch (Exception e) {
+                future.completeExceptionally(e);
+            }
+        });
+        return future;
+    }
+
+    public CompletableFuture<Void> discardAsync(String id) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        shell.enqueueWrite(() -> {
+            try {
+                discard(id);
+                future.complete(null);
+            } catch (Exception e) {
+                future.completeExceptionally(e);
+            }
+        });
+        return future;
     }
 
     /**

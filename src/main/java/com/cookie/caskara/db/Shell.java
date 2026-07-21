@@ -13,9 +13,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -38,6 +40,9 @@ public class Shell {
     private final Map<Class<?>, Core<?>> cores = new ConcurrentHashMap<>();
     private final Stats stats = new Stats();
     private ScheduledExecutorService cleanupScheduler;
+    
+    private final BlockingQueue<Runnable> asyncWriteQueue = new LinkedBlockingQueue<>();
+    private Thread asyncWriterThread;
 
     public Shell(File shellFile) {
         this.shellFile = shellFile;
@@ -75,12 +80,36 @@ public class Shell {
                         ")");
                 stmt.execute("CREATE INDEX IF NOT EXISTS idx_type ON elements(type)");
                 
-                // Migrations for existing databases
+            // Migrations for existing databases
                 try { stmt.execute("ALTER TABLE elements ADD COLUMN expires_at INTEGER"); } catch (SQLException ignored) {}
                 try { stmt.execute("ALTER TABLE elements ADD COLUMN deleted_at INTEGER"); } catch (SQLException ignored) {}
                 try { stmt.execute("ALTER TABLE elements ADD COLUMN version INTEGER DEFAULT 1"); } catch (SQLException ignored) {}
             }
             
+            if (asyncWriterThread == null) {
+                asyncWriterThread = new Thread(() -> {
+                    while (!Thread.currentThread().isInterrupted()) {
+                        try {
+                            Runnable firstTask = asyncWriteQueue.take();
+                            transaction(tx -> {
+                                firstTask.run();
+                                Runnable nextTask;
+                                while ((nextTask = asyncWriteQueue.poll()) != null) {
+                                    nextTask.run();
+                                }
+                            });
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        } catch (Exception e) {
+                            System.err.println("[Caskara] Async writer thread encountered an error: " + e.getMessage());
+                        }
+                    }
+                }, "Caskara-Writer-" + shellFile.getName());
+                asyncWriterThread.setDaemon(true);
+                asyncWriterThread.start();
+            }
+
             startCleanupTask();
         } catch (Exception e) {
             throw new DatabaseException("Failed to initialize shell connection for: " + shellFile.getName(), e);
@@ -104,6 +133,13 @@ public class Shell {
             throw new DatabaseException("Failed to verify connection state", e);
         }
         return connection;
+    }
+
+    /**
+     * Enqueues a write operation to be processed by the background batch writer thread.
+     */
+    public void enqueueWrite(Runnable task) {
+        asyncWriteQueue.offer(task);
     }
 
     /**
@@ -255,11 +291,13 @@ public class Shell {
      * Closes the shell and its connections.
      */
     public void close() {
+        if (cleanupScheduler != null) {
+            cleanupScheduler.shutdownNow();
+        }
+        if (asyncWriterThread != null) {
+            asyncWriterThread.interrupt();
+        }
         try {
-            if (cleanupScheduler != null) {
-                cleanupScheduler.shutdownNow();
-            }
-            executor.shutdown();
             if (connection != null && !connection.isClosed()) {
                 connection.close();
             }
