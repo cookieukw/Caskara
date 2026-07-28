@@ -29,7 +29,7 @@ graph TD
     
     subgraph "Internal Processing"
     I[LRU Cache] <--> J[JSON Serializer]
-    J <--> K[AES-256 Encryption]
+    J <--> K[AES-128 Encryption]
     K <--> L[SQLite Storage]
     end
     
@@ -124,7 +124,7 @@ Caskara.restore("mod-123", ModData.class); // Bring it back!
 
 ## � Security: Transparent Encryption
 
-Secure sensitive data (like Discord tokens or private keys) with AES-256. Caskara handles encryption and decryption automatically during I/O.
+Secure sensitive data (like Discord tokens or private keys) with AES-128 (see the note below). Caskara handles encryption and decryption automatically during I/O.
 
 ```java
 // Call this once during initialization

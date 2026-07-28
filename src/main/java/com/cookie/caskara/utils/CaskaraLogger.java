@@ -4,14 +4,28 @@ import java.lang.reflect.Method;
 
 public class CaskaraLogger {
 
+    // The Hytale logger is resolved reflectively so Caskara also works in plain JUnit
+    // runs. Doing that lookup on every log call was pure overhead, so the outcome
+    // (including "not available") is resolved once and cached.
+    private static volatile Object cachedLogger;
+    private static volatile boolean loggerResolved = false;
+
     private static Object getLogger() {
-        try {
-            Class<?> loggerClass = Class.forName("com.hypixel.hytale.logger.HytaleLogger");
-            Method method = loggerClass.getMethod("forEnclosingClass");
-            return method.invoke(null);
-        } catch (Throwable t) {
-            return null;
+        if (!loggerResolved) {
+            synchronized (CaskaraLogger.class) {
+                if (!loggerResolved) {
+                    try {
+                        Class<?> loggerClass = Class.forName("com.hypixel.hytale.logger.HytaleLogger");
+                        Method method = loggerClass.getMethod("forEnclosingClass");
+                        cachedLogger = method.invoke(null);
+                    } catch (Throwable t) {
+                        cachedLogger = null;
+                    }
+                    loggerResolved = true;
+                }
+            }
         }
+        return cachedLogger;
     }
 
     public static void info(String message) {

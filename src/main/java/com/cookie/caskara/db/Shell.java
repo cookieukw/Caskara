@@ -222,9 +222,6 @@ public class Shell {
     }
 
     /**
-     * Clears all Core caches (used after a transaction rollback to stay in sync with DB).
-     */
-    /**
      * Public entry point to drop every Core's in-memory cache for this shell.
      * Required after out-of-band writes (e.g. the admin UI deleting rows directly).
      */
@@ -232,6 +229,9 @@ public class Shell {
         clearAllCaches();
     }
 
+    /**
+     * Clears all Core caches (used after a transaction rollback to stay in sync with DB).
+     */
     void clearAllCaches() {
         for (Core<?> core : cores.values()) {
             core.clearCache();

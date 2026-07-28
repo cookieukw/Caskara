@@ -34,7 +34,7 @@ Plugin Code → Caskara API → Shell Controller
 └───────────────┘
 
 Internal:
-LRU Cache ↔ JSON Serializer ↔ AES-256 Encryption ↔ SQLite Storage
+LRU Cache ↔ JSON Serializer ↔ AES-128 Encryption ↔ SQLite Storage
 ```
 
 ---
@@ -138,7 +138,7 @@ Caskara.restore("mod-123", ModData.class); // Bring it back!
 
 ## 🔐 Security: Transparent Encryption
 
-Secure sensitive data (like Discord tokens or private keys) with AES-256. Caskara handles encryption and decryption automatically during I/O.
+Secure sensitive data (like Discord tokens or private keys) with AES-128 (see the note below). Caskara handles encryption and decryption automatically during I/O.
 
 ```java
 // Call this once during initialization
