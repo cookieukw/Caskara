@@ -312,7 +312,14 @@ public class Query<T> {
         try {
             // Convert to JsonObject to easily extract any field
             JsonObject json = Core.getGson().toJsonTree(item).getAsJsonObject();
-            JsonElement element = json.get(fieldName);
+
+            // Support dotted paths ("location.x") for parity with the SQL path,
+            // which uses json_extract(json, '$.' || fieldName).
+            JsonElement element = json;
+            for (String part : fieldName.split("\\.")) {
+                if (element == null || !element.isJsonObject()) return null;
+                element = element.getAsJsonObject().get(part);
+            }
             if (element == null || element.isJsonNull()) return null;
             
             if (element.isJsonPrimitive()) {
