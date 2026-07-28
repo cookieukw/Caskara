@@ -70,6 +70,7 @@ public class Core<T> {
     private final List<BiConsumer<String, T>> beforeSaveHooks = new ArrayList<>();
     private final List<BiConsumer<String, T>> afterSaveHooks = new ArrayList<>();
     private final List<Consumer<String>> beforeDeleteHooks = new ArrayList<>();
+    private final List<Consumer<String>> afterDeleteHooks = new ArrayList<>();
     private final List<Predicate<T>> validators = new ArrayList<>();
 
     // Migration System (Phase 6)
@@ -352,11 +353,7 @@ public class Core<T> {
         }
 
         // Trigger Reactive Observers
-        genericListeners.forEach(l -> l.accept(finalId, element));
-        List<BiConsumer<String, T>> specific = listeners.get(finalId);
-        if (specific != null) {
-            specific.forEach(l -> l.accept(finalId, element));
-        }
+        notifyObservers(finalId, element);
 
         return id;
     }
@@ -454,7 +451,7 @@ public class Core<T> {
 
     /**
      * Discards an element from the shell.
-     * Triggers before delete hooks.
+     * Triggers before/after delete hooks and notifies observers with a null value.
      */
     public void discard(String id) {
         // Trigger Before Delete Hooks
@@ -474,6 +471,24 @@ public class Core<T> {
             }
             return null;
         });
+
+        for (Consumer<String> hook : afterDeleteHooks) {
+            hook.accept(id);
+        }
+        notifyObservers(id, null);
+    }
+
+    /**
+     * Notifies generic and per-id observers. A {@code null} value means the element was
+     * deleted — previously only preserve() emitted events, so anything relying on
+     * observeAll() to mirror state never learned about deletions.
+     */
+    private void notifyObservers(String id, T value) {
+        genericListeners.forEach(l -> l.accept(id, value));
+        List<BiConsumer<String, T>> specific = listeners.get(id);
+        if (specific != null) {
+            specific.forEach(l -> l.accept(id, value));
+        }
     }
 
     // Phase 2 Registration Methods
@@ -488,6 +503,13 @@ public class Core<T> {
 
     public void onBeforeDelete(Consumer<String> hook) {
         this.beforeDeleteHooks.add(hook);
+    }
+
+    /**
+     * Runs after an element is removed by {@link #discard(String)} or {@link #softDelete(String)}.
+     */
+    public void onAfterDelete(Consumer<String> hook) {
+        this.afterDeleteHooks.add(hook);
     }
 
     public void addValidator(Predicate<T> validator) {
@@ -590,6 +612,47 @@ public class Core<T> {
         genericListeners.add(observer);
     }
 
+    /**
+     * Removes a single observer previously registered with {@link #observe(String, BiConsumer)}.
+     * <p>
+     * Without this, a server that registers an observer per joining player accumulates
+     * entries in the listener map forever — one of the few unbounded structures in Caskara.
+     *
+     * @return true if the observer was found and removed
+     */
+    public boolean unobserve(String id, BiConsumer<String, T> observer) {
+        List<BiConsumer<String, T>> specific = listeners.get(id);
+        if (specific == null) {
+            return false;
+        }
+        boolean removed = specific.remove(observer);
+        if (specific.isEmpty()) {
+            // remove(key, value) so we never drop a list another thread just populated
+            listeners.remove(id, specific);
+        }
+        return removed;
+    }
+
+    /**
+     * Removes every observer registered for the given id.
+     * Call this when the subject goes away (e.g. a player disconnects).
+     */
+    public void unobserveAll(String id) {
+        listeners.remove(id);
+    }
+
+    /**
+     * Removes an observer registered with {@link #observeAll(BiConsumer)}.
+     */
+    public boolean unobserveAll(BiConsumer<String, T> observer) {
+        return genericListeners.remove(observer);
+    }
+
+    /** Number of ids currently holding at least one observer. Useful to spot leaks. */
+    public int getObservedIdCount() {
+        return listeners.size();
+    }
+
     public void setSecurityKey(String key) {
         this.securityKey = key;
     }
@@ -682,6 +745,10 @@ public class Core<T> {
      * Marks an element as deleted without removing it from the database (Soft Delete).
      */
     public void softDelete(String id) {
+        for (Consumer<String> hook : beforeDeleteHooks) {
+            hook.accept(id);
+        }
+
         shell.runInLock(() -> {
             String sql = "UPDATE elements SET deleted_at = ? WHERE id = ? AND type = ?";
             try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
@@ -695,6 +762,11 @@ public class Core<T> {
             }
             return null;
         });
+
+        for (Consumer<String> hook : afterDeleteHooks) {
+            hook.accept(id);
+        }
+        notifyObservers(id, null);
     }
 
     /**
