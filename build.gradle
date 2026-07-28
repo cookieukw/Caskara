@@ -79,7 +79,12 @@ shadowJar {
     archiveFileName.set("Caskara-${project.version}.jar")
     mergeServiceFiles()
 }
-tasks.shadowJar.finalizedBy('deploy')
+// Deploy is opt-in: `./gradlew shadowJar -Pdeploy`, or just `./gradlew deploy`.
+// It used to run after EVERY build, copying the jar into a local Hytale install —
+// that breaks CI and any machine that doesn't have one.
+if (project.hasProperty('deploy')) {
+    tasks.shadowJar.finalizedBy('deploy')
+}
 
 tasks.jar {
     archiveClassifier.set('plain')

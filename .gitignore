@@ -5,3 +5,15 @@ build
 .agents
 .venv/
 site/
+
+# Machine-specific paths (sdk.dir / hytale.dir)
+local.properties
+
+# (libs/ has its own .gitignore covering the Hytale server jar)
+
+# Databases and backups produced by running the tests
+test_admin_logic_db/
+*.db
+*.db-wal
+*.db-shm
+*.bak
