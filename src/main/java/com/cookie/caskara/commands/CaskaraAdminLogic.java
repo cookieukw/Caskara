@@ -141,7 +141,12 @@ public class CaskaraAdminLogic {
         return list;
     }
 
-    public static boolean deleteEntity(String shellName, String id) {
+    /**
+     * Deletes a single row. Both id and type are required: since the composite primary
+     * key landed, the same id can legitimately exist for several entity types, and
+     * deleting on id alone would wipe all of them.
+     */
+    public static boolean deleteEntity(String shellName, String id, String type) {
         Shell targetShell = null;
         for (Shell s : Caskara.getShells().values()) {
             if (s.getFile() != null && s.getFile().getName().equals(shellName)) {
@@ -155,8 +160,10 @@ public class CaskaraAdminLogic {
         // Core LRU caches afterwards — otherwise extract() would keep serving the
         // deleted entity from memory.
         return shell.runInLock(() -> {
-            try (PreparedStatement pstmt = shell.getConnection().prepareStatement("DELETE FROM elements WHERE id = ?")) {
+            try (PreparedStatement pstmt = shell.getConnection().prepareStatement(
+                    "DELETE FROM elements WHERE id = ? AND type = ?")) {
                 pstmt.setString(1, id);
+                pstmt.setString(2, type);
                 boolean deleted = pstmt.executeUpdate() > 0;
                 if (deleted) {
                     shell.invalidateCaches();
