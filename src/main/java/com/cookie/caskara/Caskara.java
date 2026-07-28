@@ -89,7 +89,7 @@ public class Caskara {
         if (periodHours > 0) {
             autoVacuumTask = scheduler.scheduleAtFixedRate(() -> {
                 try {
-                    com.cookie.caskara.commands.CaskaraAdminLogic.runVacuum();
+                    CaskaraAdminLogic.runVacuum();
                 } catch (Exception ignored) {}
             }, periodHours, periodHours, TimeUnit.HOURS);
         }
