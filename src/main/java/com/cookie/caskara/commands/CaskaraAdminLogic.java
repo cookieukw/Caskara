@@ -60,11 +60,14 @@ public class CaskaraAdminLogic {
 
         long totalAccesses = totalHits + totalMisses;
         double hitRate = totalAccesses > 0 ? ((double) totalHits / totalAccesses) * 100 : 0.0;
-        double memMB = totalMemoryBytes / 1024.0 / 1024.0;
+        double diskMB = totalMemoryBytes / 1024.0 / 1024.0;
 
         Map<String, String> stats = new HashMap<>();
         stats.put("HitRate", String.format("%.1f%%", hitRate));
-        stats.put("Memory", String.format("%.1f MB", memMB));
+        // This is the size of the .db files on disk, not RAM. "Memory" is kept as an
+        // alias so existing UI bindings keep working.
+        stats.put("Disk", String.format("%.1f MB", diskMB));
+        stats.put("Memory", String.format("%.1f MB", diskMB));
         stats.put("Total", String.valueOf(totalEntities));
         return stats;
     }

@@ -85,7 +85,8 @@ public class CaskaraAdminPage extends CustomUIPage {
         // 1. Update Stats
         Map<String, String> stats = CaskaraAdminLogic.getGlobalStatsMap();
         cmdBuilder.set("#StatHitRateValue.Text", stats.getOrDefault("HitRate", "0%"));
-        cmdBuilder.set("#StatMemoryValue.Text", stats.getOrDefault("Memory", "0 MB"));
+        // Disk footprint of the .db files, not RAM
+        cmdBuilder.set("#StatMemoryValue.Text", stats.getOrDefault("Disk", "0 MB"));
         cmdBuilder.set("#StatTotalValue.Text", stats.getOrDefault("Total", "0"));
 
         // 2. Fetch paginated entities
