@@ -548,6 +548,25 @@ public class Core<T> {
     }
 
     /**
+     * Counts the live (non-deleted, non-expired) records of this type without
+     * deserialising or decrypting them.
+     */
+    public long count() {
+        return shell.runInLock(() -> {
+            String sql = "SELECT COUNT(*) FROM elements WHERE type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)";
+            try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
+                pstmt.setString(1, typeName);
+                pstmt.setLong(2, System.currentTimeMillis());
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    return rs.next() ? rs.getLong(1) : 0L;
+                }
+            } catch (SQLException e) {
+                throw new DatabaseException("Failed to count elements of type: " + typeName, e);
+            }
+        });
+    }
+
+    /**
      * Registers a migration function for a specific version.
      */
     public void registerMigration(int version, Function<JsonObject, JsonObject> migrator) {
