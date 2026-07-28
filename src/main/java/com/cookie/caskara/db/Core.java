@@ -93,8 +93,10 @@ public class Core<T> {
     }
 
     public void setCacheSize(int newSize) {
-        this.maxCacheSize = newSize;
-        Map<String, T> newCache = Collections.synchronizedMap(new LinkedHashMap<>(newSize, 0.75f, true) {
+        // LinkedHashMap rejects a negative initial capacity, and a 0-sized cache
+        // would evict every entry immediately. Clamp to a sane minimum.
+        this.maxCacheSize = Math.max(1, newSize);
+        Map<String, T> newCache = Collections.synchronizedMap(new LinkedHashMap<>(this.maxCacheSize, 0.75f, true) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<String, T> eldest) {
                 return size() > maxCacheSize;
@@ -127,7 +129,14 @@ public class Core<T> {
         // Parse @TTL
         TTL ttl = clazz.getAnnotation(TTL.class);
         if (ttl != null) {
-            this.defaultTtlMillis = (ttl.minutes() * 60_000L) + (ttl.seconds() * 1000L);
+            long millis = (ttl.minutes() * 60_000L) + (ttl.seconds() * 1000L);
+            // A bare @TTL (both values 0) previously meant "expires_at = now",
+            // silently discarding every record. Treat it as "no TTL" instead.
+            if (millis > 0) {
+                this.defaultTtlMillis = millis;
+            } else {
+                CaskaraLogger.warn("@TTL on " + typeName + " has minutes=0 and seconds=0; ignoring it (no expiration applied).");
+            }
         }
 
         // Parse @Index and @Indices
