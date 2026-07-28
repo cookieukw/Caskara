@@ -799,42 +799,52 @@ public class Core<T> {
      */
     private void syncId(String id, T element) {
         if (element == null || id == null) return;
-        
-        boolean synced = false;
-        
-        // 1. Try @Id annotation
-        for (Field field : clazz.getDeclaredFields()) {
-            if (field.isAnnotationPresent(Id.class)) {
-                try {
-                    field.setAccessible(true);
-                    Object current = field.get(element);
-                    if (current == null || (current instanceof String && ((String) current).isEmpty())) {
-                        field.set(element, id);
-                    }
-                    synced = true;
-                    break;
-                } catch (Exception ignored) {}
-            }
-        }
-        
-        if (synced) return;
 
-        // 2. Fallback to name-based conventions
-        for (String fName : new String[]{"id", "uuid", "uid"}) {
-            try {
-                Field field = clazz.getDeclaredField(fName);
-                field.setAccessible(true);
-                Object current = field.get(element);
-                // Inject the DB id if the field is null OR empty string
-                if (current == null || (current instanceof String && ((String) current).isEmpty())) {
-                    field.set(element, id);
+        Field target = findIdField(clazz);
+        if (target == null) return;
+
+        try {
+            target.setAccessible(true);
+            Object current = target.get(element);
+            // Inject the DB id if the field is null OR empty string
+            if (current == null || (current instanceof String && ((String) current).isEmpty())) {
+                target.set(element, id);
+            }
+        } catch (Exception ignored) {
+            // Fail silently for reflection sync
+        }
+    }
+
+    /**
+     * Locates the id field of an entity, walking up the class hierarchy.
+     * <p>
+     * Both this and {@link com.cookie.caskara.Caskara#getId(Object)} used to call
+     * {@code getDeclaredFields()} on the concrete class only, so an entity inheriting its
+     * {@code @Id} (or its {@code id} field) from a base class was never recognised: the id
+     * was silently not injected and {@code save(obj)} generated a fresh UUID on every call.
+     *
+     * @return the annotated or conventionally-named field, or null if there is none
+     */
+    public static Field findIdField(Class<?> type) {
+        // 1. @Id annotation anywhere in the hierarchy
+        for (Class<?> c = type; c != null && c != Object.class; c = c.getSuperclass()) {
+            for (Field field : c.getDeclaredFields()) {
+                if (field.isAnnotationPresent(Id.class)) {
+                    return field;
                 }
-                break;
-            } catch (NoSuchFieldException ignored) {
-            } catch (Exception e) {
-                // Fail silently for reflection sync
             }
         }
+        // 2. Fallback to name-based conventions, closest class first
+        for (Class<?> c = type; c != null && c != Object.class; c = c.getSuperclass()) {
+            for (String fName : new String[]{"id", "uuid", "uid"}) {
+                try {
+                    return c.getDeclaredField(fName);
+                } catch (NoSuchFieldException ignored) {
+                    // try the next name / superclass
+                }
+            }
+        }
+        return null;
     }
 
     /**

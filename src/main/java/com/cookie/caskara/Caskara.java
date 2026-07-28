@@ -1,7 +1,6 @@
 package com.cookie.caskara;
 
 import com.cookie.caskara.annotations.CaskaraEntity;
-import com.cookie.caskara.annotations.Id;
 import com.cookie.caskara.commands.CaskaraAdminLogic;
 import com.cookie.caskara.commands.CaskaraCommand;
 import com.cookie.caskara.db.Core;
@@ -430,28 +429,18 @@ public class Caskara {
      */
     public static String getId(Object object) {
         if (object == null) return null;
-        
-        // 1. Check for @Id annotation
-        for (Field field : object.getClass().getDeclaredFields()) {
-            if (field.isAnnotationPresent(Id.class)) {
-                try {
-                    field.setAccessible(true);
-                    Object val = field.get(object);
-                    if (val != null) return val.toString();
-                } catch (Exception ignored) {}
-            }
+
+        // Shares Core's resolver so both sides agree on which field is the id,
+        // including fields inherited from a base entity class.
+        Field field = Core.findIdField(object.getClass());
+        if (field == null) return null;
+        try {
+            field.setAccessible(true);
+            Object val = field.get(object);
+            return val != null ? val.toString() : null;
+        } catch (Exception ignored) {
+            return null;
         }
-        
-        // 2. Fallback to name-based conventions
-        for (String fName : new String[]{"id", "uuid", "uid"}) {
-            try {
-                Field field = object.getClass().getDeclaredField(fName);
-                field.setAccessible(true);
-                Object val = field.get(object);
-                if (val != null) return val.toString();
-            } catch (Exception ignored) {}
-        }
-        return null;
     }
 
     /**
