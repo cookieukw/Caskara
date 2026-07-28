@@ -169,8 +169,9 @@ public class CaskaraAdminPage extends CustomUIPage {
             for (int i = 0; i < ITEMS_PER_PAGE; i++) {
                 if (eventData.contains("\"index\":\"" + i + "\"")) {
                     if (i < currentEntities.size()) {
-                        String idToDelete = currentEntities.get(i).id;
-                        boolean success = CaskaraAdminLogic.deleteEntity(currentShell, idToDelete);
+                        CaskaraAdminLogic.EntityData target = currentEntities.get(i);
+                        String idToDelete = target.id;
+                        boolean success = CaskaraAdminLogic.deleteEntity(currentShell, idToDelete, target.type);
                         if (success) {
                             this.playerRef.sendMessage(Message.raw("[Caskara] §aDeleted entity " + idToDelete + " from " + currentShell));
                             // Re-fetch data and refresh
