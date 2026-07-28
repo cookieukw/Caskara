@@ -134,9 +134,13 @@ public class Query<T> {
         return this;
     }
 
+    /**
+     * 1-based pagination. Pages below 1 are clamped to the first page instead of
+     * producing a negative OFFSET (which SQLite rejects).
+     */
     public Query<T> page(int page, int size) {
         this.limit = size;
-        this.offset = (page - 1) * size;
+        this.offset = Math.max(0, (page - 1) * size);
         return this;
     }
 
