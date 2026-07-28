@@ -189,7 +189,17 @@ public class Query<T> {
 
                     try (ResultSet rs = pstmt.executeQuery()) {
                         while (rs.next()) {
-                            results.add(Core.getGson().fromJson(rs.getString("json"), clazz));
+                            // Go through Core so results get the same @Id sync and
+                            // schema-migration treatment as extract()/extractAll().
+                            String rowId = rs.getString("id");
+                            String rowJson = rs.getString("json");
+                            int rowVersion = rs.getInt("version");
+                            long exp = rs.getLong("expires_at");
+                            Long expiresAt = rs.wasNull() ? null : exp;
+                            T obj = core.materialize(rowId, rowJson, rowVersion, expiresAt);
+                            if (obj != null) {
+                                results.add(obj);
+                            }
                         }
                     }
                 } catch (SQLException e) {
