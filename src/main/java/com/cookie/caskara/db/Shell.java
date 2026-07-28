@@ -36,10 +36,14 @@ public class Shell {
     private final File shellFile;
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final ReentrantLock lock = new ReentrantLock();
-    private Connection connection;
+    private volatile Connection connection;
     private final Map<Class<?>, Core<?>> cores = new ConcurrentHashMap<>();
+    private final Object coreCreationLock = new Object();
     private final Stats stats = new Stats();
     private ScheduledExecutorService cleanupScheduler;
+
+    /** Nesting depth of {@link #transaction(Consumer)} on the thread currently holding the lock. */
+    private int transactionDepth = 0;
     
     private final BlockingQueue<Runnable> asyncWriteQueue = new LinkedBlockingQueue<>();
     private Thread asyncWriterThread;
@@ -73,6 +77,9 @@ public class Shell {
             try (Statement stmt = connection.createStatement()) {
                 stmt.execute("PRAGMA journal_mode = WAL");
                 stmt.execute("PRAGMA synchronous = NORMAL");
+                // Required so that "INSERT OR REPLACE" fires the AFTER DELETE triggers that
+                // keep the FTS5 index in sync. Without it the index accumulates stale rows.
+                stmt.execute("PRAGMA recursive_triggers = ON");
                 
                 stmt.execute("CREATE TABLE IF NOT EXISTS elements (" +
                         "id TEXT PRIMARY KEY," +
@@ -159,15 +166,37 @@ public class Shell {
     }
 
     /**
+     * True when the calling thread already owns the shell lock (i.e. it is inside
+     * {@link #runInLock(Supplier)} or {@link #transaction(Consumer)}).
+     * Used to avoid dispatching reads to another thread, which would deadlock.
+     */
+    public boolean isLockHeldByCurrentThread() {
+        return lock.isHeldByCurrentThread();
+    }
+
+    /**
      * Executes a series of operations within a single SQL transaction.
      * Thread-safe and atomic.
      */
     public void transaction(Consumer<Transaction> action) {
         lock.lock();
         try {
+            // Nested transaction: join the outer one instead of committing early.
+            // Committing here would make the outer transaction non-atomic.
+            if (transactionDepth > 0) {
+                transactionDepth++;
+                try {
+                    action.accept(new Transaction(this));
+                } finally {
+                    transactionDepth--;
+                }
+                return;
+            }
+
             Connection conn = getConnection();
             boolean previousAutoCommit = conn.getAutoCommit();
             conn.setAutoCommit(false);
+            transactionDepth = 1;
             try {
                 action.accept(new Transaction(this));
                 conn.commit();
@@ -182,6 +211,7 @@ public class Shell {
                 }
                 throw new DatabaseException("Transaction failed and was rolled back", e);
             } finally {
+                transactionDepth = 0;
                 conn.setAutoCommit(previousAutoCommit);
             }
         } catch (SQLException e) {
@@ -214,7 +244,23 @@ public class Shell {
      */
     @SuppressWarnings("unchecked")
     public <T> Core<T> core(Class<T> clazz) {
-        return (Core<T>) cores.computeIfAbsent(clazz, c -> new Core<>(this, (Class<T>) c));
+        // NOTE: deliberately not computeIfAbsent — the Core constructor runs DDL,
+        // opens connections and may re-enter shell.core(), which would either
+        // deadlock a ConcurrentHashMap bin or throw IllegalStateException
+        // ("recursive update").
+        Core<T> existing = (Core<T>) cores.get(clazz);
+        if (existing != null) {
+            return existing;
+        }
+        synchronized (coreCreationLock) {
+            existing = (Core<T>) cores.get(clazz);
+            if (existing != null) {
+                return existing;
+            }
+            Core<T> created = new Core<>(this, clazz);
+            cores.put(clazz, created);
+            return created;
+        }
     }
 
     /**
@@ -272,6 +318,11 @@ public class Shell {
     }
 
     private void startCleanupTask() {
+        // initConnection() may run again after a reconnect; without this guard every
+        // reconnect leaked an extra scheduler thread.
+        if (cleanupScheduler != null && !cleanupScheduler.isShutdown()) {
+            return;
+        }
         cleanupScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "caskara-cleanup");
             t.setDaemon(true);
@@ -300,7 +351,10 @@ public class Shell {
         }
         if (asyncWriterThread != null) {
             asyncWriterThread.interrupt();
+            asyncWriterThread = null;
         }
+        executor.shutdown();
+        clearAllCaches();
         try {
             if (connection != null && !connection.isClosed()) {
                 connection.close();
