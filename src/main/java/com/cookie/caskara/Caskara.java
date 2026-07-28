@@ -150,8 +150,20 @@ public class Caskara {
      * Opens a global Shell by name.
      */
     public static Shell shell(String name) {
-        return shells.computeIfAbsent("global:" + name, 
+        requireInitialized();
+        return shells.computeIfAbsent("global:" + name,
             n -> new Shell(new File(dataFolder, "global/" + name + ".db")));
+    }
+
+    /**
+     * Fails fast with a readable message instead of silently writing shells to a
+     * relative path when init() was never called.
+     */
+    private static void requireInitialized() {
+        if (dataFolder == null) {
+            throw new IllegalStateException(
+                "Caskara has not been initialized. Call Caskara.init(modId, dataFolder) during your plugin's setup() before using the API.");
+        }
     }
 
     /**
@@ -223,11 +235,15 @@ public class Caskara {
     }
 
     /**
-     * Saves an object with an automatic UUID and specific TTL.
+     * Saves an object with an automatic UUID and a TTL expressed as a duration in
+     * milliseconds (i.e. the record expires {@code ttlMillis} from now).
      */
     @SuppressWarnings("unchecked")
     public static <T> String save(T object, long ttlMillis) {
-        return core((Class<T>) object.getClass()).preserve(null, object, ttlMillis);
+        // preserve()'s third parameter is an ABSOLUTE epoch timestamp. Passing ttlMillis
+        // straight through made every record expire in 1970, silently hiding the data.
+        Long expiresAt = ttlMillis > 0 ? System.currentTimeMillis() + ttlMillis : null;
+        return core((Class<T>) object.getClass()).preserve(null, object, expiresAt);
     }
 
     /**
