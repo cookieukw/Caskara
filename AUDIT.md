@@ -59,7 +59,7 @@ silencioso + o registro passava a ser ilegível na próxima leitura (o `decrypt`
 
 **Corrigido:** `pstmt.setString(1, encrypt(finalJson))`.
 
-### 4. ⚠️ `id` é PRIMARY KEY global — entidades de tipos diferentes se sobrescrevem
+### 4. ✅ `id` era PRIMARY KEY global — entidades de tipos diferentes se sobrescreviam
 
 `Shell.initConnection`
 
