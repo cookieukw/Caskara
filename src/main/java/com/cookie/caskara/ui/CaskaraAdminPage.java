@@ -1,5 +1,9 @@
 package com.cookie.caskara.ui;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import com.cookie.caskara.commands.CaskaraAdminLogic;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -16,10 +20,13 @@ import com.hypixel.hytale.server.core.Message;
 
 public class CaskaraAdminPage extends CustomUIPage {
 
-    private String currentShell = "global.db";
+    private String currentShell = null;
     private int currentPage = 1;
     private static final int ITEMS_PER_PAGE = 20;
-    private java.util.List<CaskaraAdminLogic.EntityData> currentEntities = new java.util.ArrayList<>();
+    private static final int SHELL_SLOTS = 4;
+    private List<CaskaraAdminLogic.EntityData> currentEntities = new ArrayList<>();
+    /** Shell file names currently bound to the 4 sidebar slots. */
+    private List<String> shellSlots = new ArrayList<>();
 
     public CaskaraAdminPage(PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismiss);
@@ -42,11 +49,15 @@ public class CaskaraAdminPage extends CustomUIPage {
         // Bind Header/Sidebar Buttons
         evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnBackup", EventData.of("action", "backup"));
         evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnVacuum", EventData.of("action", "vacuum"));
-        evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnGlobalDb", EventData.of("action", "switch").put("shell", "global.db"));
-        evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnPlayersDb", EventData.of("action", "switch").put("shell", "players.db"));
-        evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnQuestsDb", EventData.of("action", "switch").put("shell", "quests.db"));
-        evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnEconomyDb", EventData.of("action", "switch").put("shell", "economy.db"));
-        
+        // Sidebar slots are bound by index; the actual shell they point at is resolved
+        // at render time from the shells that are really open.
+        String[] shellBtnIds = {"#BtnGlobalDb", "#BtnPlayersDb", "#BtnQuestsDb", "#BtnEconomyDb"};
+        for (int i = 0; i < SHELL_SLOTS; i++) {
+            evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, shellBtnIds[i],
+                    EventData.of("action", "switch").put("slot", String.valueOf(i)));
+        }
+
+
         evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnNewEntry", EventData.of("action", "newEntry"));
         evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnFilter", EventData.of("action", "filter"));
         evtBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#BtnTests", EventData.of("action", "tests"));
@@ -64,28 +75,39 @@ public class CaskaraAdminPage extends CustomUIPage {
     }
 
     private void loadData(UICommandBuilder cmdBuilder) {
+        // 0. Resolve which shells actually exist right now
+        shellSlots = CaskaraAdminLogic.listShellFileNames();
+        if (currentShell == null || !shellSlots.contains(currentShell)) {
+            currentShell = shellSlots.isEmpty() ? null : shellSlots.get(0);
+            currentPage = 1;
+        }
+
         // 1. Update Stats
-        java.util.Map<String, String> stats = CaskaraAdminLogic.getGlobalStatsMap();
+        Map<String, String> stats = CaskaraAdminLogic.getGlobalStatsMap();
         cmdBuilder.set("#StatHitRateValue.Text", stats.getOrDefault("HitRate", "0%"));
         cmdBuilder.set("#StatMemoryValue.Text", stats.getOrDefault("Memory", "0 MB"));
         cmdBuilder.set("#StatTotalValue.Text", stats.getOrDefault("Total", "0"));
 
         // 2. Fetch paginated entities
         int offset = (currentPage - 1) * ITEMS_PER_PAGE;
-        currentEntities = CaskaraAdminLogic.getShellEntities(currentShell, offset, ITEMS_PER_PAGE);
+        currentEntities = currentShell == null
+                ? new ArrayList<>()
+                : CaskaraAdminLogic.getShellEntities(currentShell, offset, ITEMS_PER_PAGE);
 
         // 3. Update Pagination Label
         cmdBuilder.set("#LblPageIndicator.Text", "Page " + currentPage);
 
-        // 4. Update Sidebar state
-        String[] shells = {"global.db", "players.db", "quests.db", "economy.db"};
+        // 4. Update Sidebar state from the real shell list
         String[] btnIds = {"#BtnGlobalDb", "#BtnPlayersDb", "#BtnQuestsDb", "#BtnEconomyDb"};
         String[] lblIds = {"#LblGlobalDb", "#LblPlayersDb", "#LblQuestsDb", "#LblEconomyDb"};
-        
-        for (int i = 0; i < shells.length; i++) {
-            boolean active = shells[i].equals(currentShell);
+
+        for (int i = 0; i < SHELL_SLOTS; i++) {
+            boolean hasShell = i < shellSlots.size();
+            String name = hasShell ? shellSlots.get(i) : "-";
+            boolean active = hasShell && name.equals(currentShell);
+            cmdBuilder.set(btnIds[i] + ".Visible", hasShell);
             cmdBuilder.set(btnIds[i] + ".Background", active ? "#2A2A2A" : "#000000(0)");
-            cmdBuilder.set(lblIds[i] + ".Text", shells[i]);
+            cmdBuilder.set(lblIds[i] + ".Text", name);
             cmdBuilder.set(lblIds[i] + ".TextColor", active ? "#FFB000" : "#BBBBBB");
         }
 
@@ -122,14 +144,16 @@ public class CaskaraAdminPage extends CustomUIPage {
             CaskaraAdminLogic.runVacuum().forEach(resp -> this.playerRef.sendMessage(Message.raw(resp)));
             this.close();
         } else if (eventData.contains("\"action\":\"switch\"")) {
-            // Extract shell name using basic string parsing
-            if (eventData.contains("global.db")) currentShell = "global.db";
-            else if (eventData.contains("players.db")) currentShell = "players.db";
-            else if (eventData.contains("quests.db")) currentShell = "quests.db";
-            else if (eventData.contains("economy.db")) currentShell = "economy.db";
-            
-            currentPage = 1;
-            refreshUI();
+            for (int i = 0; i < SHELL_SLOTS; i++) {
+                if (eventData.contains("\"slot\":\"" + i + "\"")) {
+                    if (i < shellSlots.size()) {
+                        currentShell = shellSlots.get(i);
+                        currentPage = 1;
+                        refreshUI();
+                    }
+                    break;
+                }
+            }
         } else if (eventData.contains("\"action\":\"prevPage\"")) {
             if (currentPage > 1) {
                 currentPage--;

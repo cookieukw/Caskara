@@ -69,6 +69,22 @@ public class CaskaraAdminLogic {
         return stats;
     }
 
+    /**
+     * File names of every shell currently open, sorted for a stable UI ordering.
+     * The admin page used to show a hardcoded list (global.db/players.db/quests.db/
+     * economy.db) that does not exist in a normal install, so every tab was empty.
+     */
+    public static List<String> listShellFileNames() {
+        List<String> names = new ArrayList<>();
+        for (Shell s : Caskara.getShells().values()) {
+            if (s.getFile() != null && !names.contains(s.getFile().getName())) {
+                names.add(s.getFile().getName());
+            }
+        }
+        java.util.Collections.sort(names);
+        return names;
+    }
+
     public static class EntityData {
         public String id;
         public String type;
