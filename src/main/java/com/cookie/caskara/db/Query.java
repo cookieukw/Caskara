@@ -261,7 +261,7 @@ public class Query<T> {
         Object target = cond.value;
         switch (cond.operator) {
             case "=":
-                return actual.equals(target);
+                return equalsValue(actual, target);
             case ">":
                 return compare(actual, target) > 0;
             case "<":
@@ -270,10 +270,26 @@ public class Query<T> {
                 return actual.toString().toLowerCase().contains(target.toString().toLowerCase());
             case "IN":
                 List<Object> values = (List<Object>) target;
-                return values.stream().anyMatch(v -> actual.equals(v));
+                return values.stream().anyMatch(v -> equalsValue(actual, v));
             default:
                 return false;
         }
+    }
+
+    /**
+     * Equality that tolerates numeric widening. getFieldValue() always returns numbers as
+     * Double, so Double(5.0).equals(Integer(5)) was false and field("level", 5) never
+     * matched on encrypted cores.
+     */
+    @SuppressWarnings("rawtypes")
+    private boolean equalsValue(Comparable actual, Object target) {
+        if (target == null) return false;
+        if (actual instanceof Number && target instanceof Number) {
+            return ((Number) actual).doubleValue() == ((Number) target).doubleValue();
+        }
+        if (actual.equals(target)) return true;
+        // Fall back to string comparison (e.g. enum/char values serialised as text).
+        return actual.toString().equals(target.toString());
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
