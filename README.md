@@ -266,7 +266,7 @@ Caskara has a built-in background scheduler that safely backs up all active SQLi
 
 ## 📝 Changelog
 
-### [Unreleased] - Audit & Hardening
+### [3.0.0] - Audit & Hardening
 
 A full audit of the codebase. Several of these were silent data-loss bugs, so read the
 upgrade notes before touching a live server.

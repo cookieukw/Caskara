@@ -41,7 +41,7 @@ LRU Cache ↔ JSON Serializer ↔ AES-128 Encryption ↔ SQLite Storage
 
 ## ✨ What's New
 
-### Latest: Audit & Hardening
+### Version 3.0.0: Audit & Hardening
 
 A full audit of the codebase. Several fixes address **silent data-loss bugs** — read the
 upgrade notes at the bottom before updating a live server.
@@ -258,7 +258,7 @@ _Made with ❤️ for the Hytale community._
 
 ## 📝 Changelog
 
-### [Unreleased] - Audit & Hardening
+### [3.0.0] - Audit & Hardening
 
 #### 🐛 Critical Fixes
 *   **`save(obj, ttlMillis)` expired every record instantly** — the duration was used as an absolute timestamp, so records were stamped as expiring in 1970 and vanished silently.
