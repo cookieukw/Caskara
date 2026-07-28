@@ -39,7 +39,21 @@ LRU Cache ↔ JSON Serializer ↔ AES-128 Encryption ↔ SQLite Storage
 
 ---
 
-## ✨ What's New in Version 2.0.0
+## ✨ What's New
+
+### Latest: Audit & Hardening
+
+A full audit of the codebase. Several fixes address **silent data-loss bugs** — read the
+upgrade notes at the bottom before updating a live server.
+
+*   **Fixed: `save(obj, ttlMillis)` made records vanish.** The overload passed a duration where an absolute timestamp was expected, stamping records as expiring in 1970. They disappeared on the next read with no error and no log.
+*   **Fixed: entities of different types overwrote each other.** `id` alone was the primary key, so a `Player` and an `Inventory` sharing an id (a player name or UUID) destroyed one another. The key is now `(id, type)`, migrated automatically.
+*   **Fixed: reading inside a transaction always failed** with a deadlock, and nested transactions committed early.
+*   **New Query operations**: `count()`, `exists()`, `delete()`, plus `fieldNotEquals()`, `fieldGreaterOrEqual()` and `fieldLessOrEqual()`.
+*   **Observers now fire on deletion** and can finally be unsubscribed with `unobserve()` / `unobserveAll()`.
+*   **Backup rotation**: keeps the 48 most recent backups per shell instead of growing forever.
+
+### Version 2.0.0
 
 *   **Annotations API**: Use annotations like `@CaskaraEntity`, `@Index`, `@TTL`, and `@Id` to configure your entities dynamically without boilerplate code!
 *   **Auto-Backup System**: Automatically backs up all your databases using native SQLite atomic backup APIs.
@@ -243,6 +257,34 @@ _Made with ❤️ for the Hytale community._
 ---
 
 ## 📝 Changelog
+
+### [Unreleased] - Audit & Hardening
+
+#### 🐛 Critical Fixes
+*   **`save(obj, ttlMillis)` expired every record instantly** — the duration was used as an absolute timestamp, so records were stamped as expiring in 1970 and vanished silently.
+*   **Composite primary key `(id, type)`** — previously `id` alone was the key, so two entity types sharing an id destroyed each other on save.
+*   **A bare `@TTL` deleted everything** — both attributes default to 0, which meant "expires now". Now ignored with a warning.
+*   **Schema migrations leaked plaintext** for `@Encrypted` entities.
+*   **`tx.load()` inside a transaction always deadlocked**, and nested transactions committed early.
+*   **Stale FTS5 search results** — `INSERT OR REPLACE` left orphaned rows in the index.
+*   **`@Id` inherited from a base class was ignored**, producing a duplicate record on every save.
+*   **SQL injection in `createIndex()`**.
+
+#### ✨ Features
+*   Query terminal operations `count()`, `exists()`, `delete()` and the `fieldNotEquals()` / `fieldGreaterOrEqual()` / `fieldLessOrEqual()` operators.
+*   Observers fire on deletion, `onAfterDelete()` hook, and `unobserve()` / `unobserveAll()` to cancel subscriptions.
+*   `Caskara.globalStats()` across every open shell.
+*   Backup rotation (48 most recent per shell).
+*   Configurable read timeout via `Pearl.setDefaultTimeout()`.
+*   Export/import preserves TTL, soft-delete state and schema version.
+
+#### ⚠️ Upgrade Notes
+*   **The database is migrated in place on first open.** A snapshot is written to `<shell>.db.pre-composite-key.bak` first, and the migration aborts untouched if that fails. **Back up your world anyway.**
+*   Runtime indexes from `Caskara.createIndex()` are dropped by the rebuild; `@Index` ones return automatically.
+*   `CaskaraAdminLogic.deleteEntity()` now requires the entity type as a third argument.
+*   Encryption is **AES-128/ECB**, not AES-256 as previously documented.
+
+---
 
 ### [2.1.0] - Enterprise Scale Update
 
