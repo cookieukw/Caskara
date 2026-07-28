@@ -385,10 +385,25 @@ public class Caskara {
     }
 
     /**
-     * Gets performance metrics for the default shell.
+     * Gets performance metrics for the default shell only.
+     * For a server-wide view across every open shell, use {@link #globalStats()}.
      */
     public static Stats stats() {
         return shell().getStats();
+    }
+
+    /**
+     * Aggregates metrics across every open shell into a detached snapshot.
+     * <p>
+     * The returned Stats is a copy — it does not keep updating and writing to it has no
+     * effect on the live counters.
+     */
+    public static Stats globalStats() {
+        Stats snapshot = new Stats();
+        for (Shell shell : shells.values()) {
+            snapshot.merge(shell.getStats());
+        }
+        return snapshot;
     }
 
     /**

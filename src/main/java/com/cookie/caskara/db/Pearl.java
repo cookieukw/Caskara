@@ -13,6 +13,29 @@ import java.util.function.Consumer;
  * Professional version with exception handling and timeouts.
  */
 public class Pearl<T> {
+
+    /**
+     * Default blocking timeout for {@link #sync()}.
+     * <p>
+     * A hard 5s was previously baked in, so a legitimate read taking longer than that
+     * (behind a VACUUM, a big backup or a busy write lock) failed instead of waiting.
+     * Adjust globally with {@link #setDefaultTimeout(long, TimeUnit)} or per call with
+     * {@link #sync(long, TimeUnit)}.
+     */
+    private static volatile long defaultTimeoutMillis = 5_000L;
+
+    /** Sets the global default timeout used by {@link #sync()}. Must be positive. */
+    public static void setDefaultTimeout(long timeout, TimeUnit unit) {
+        if (timeout <= 0) {
+            throw new IllegalArgumentException("Pearl timeout must be positive, got: " + timeout);
+        }
+        defaultTimeoutMillis = unit.toMillis(timeout);
+    }
+
+    public static long getDefaultTimeoutMillis() {
+        return defaultTimeoutMillis;
+    }
+
     private final CompletableFuture<T> future;
     private T value;
 
@@ -30,15 +53,27 @@ public class Pearl<T> {
      * Thrown DatabaseException if the underlying operation failed.
      */
     public Optional<T> sync() {
+        return sync(defaultTimeoutMillis, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Gets the value synchronously, blocking up to the given timeout.
+     */
+    public Optional<T> sync(long timeout, TimeUnit unit) {
         if (value != null) return Optional.of(value);
         try {
             // Virtual threads mean blocking is okay, but we use a timeout for safety
-            value = future.get(5, TimeUnit.SECONDS);
+            value = future.get(timeout, unit);
             return Optional.ofNullable(value);
         } catch (ExecutionException e) {
             throw new DatabaseException("Operation failed inside Pearl retrieval", e.getCause());
-        } catch (InterruptedException | TimeoutException e) {
-            throw new DatabaseException("Operation timed out or was interrupted", e);
+        } catch (TimeoutException e) {
+            throw new DatabaseException("Operation timed out after " + unit.toMillis(timeout)
+                    + "ms. Raise it with Pearl.setDefaultTimeout(...) if this is expected.", e);
+        } catch (InterruptedException e) {
+            // Restore the flag so callers up the stack can still observe the interruption.
+            Thread.currentThread().interrupt();
+            throw new DatabaseException("Operation was interrupted", e);
         }
     }
 

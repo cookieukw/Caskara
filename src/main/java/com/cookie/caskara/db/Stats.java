@@ -48,4 +48,19 @@ public class Stats {
 
     public long getCacheHits() { return cacheHits.get(); }
     public long getCacheMisses() { return cacheMisses.get(); }
+
+    /** Total time spent in queries, in nanoseconds. */
+    public long getQueryTotalTimeNs() { return queryTotalTimeNs.get(); }
+
+    /**
+     * Adds another Stats' counters into this one. Used by
+     * {@link com.cookie.caskara.Caskara#globalStats()} to build a server-wide snapshot.
+     */
+    public void merge(Stats other) {
+        if (other == null || other == this) return;
+        cacheHits.addAndGet(other.getCacheHits());
+        cacheMisses.addAndGet(other.getCacheMisses());
+        queryTotalTimeNs.addAndGet(other.getQueryTotalTimeNs());
+        queryCount.addAndGet(other.getTotalQueries());
+    }
 }
