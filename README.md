@@ -98,6 +98,24 @@ Caskara.transaction(tx -> {
 });
 ```
 
+### Querying
+A fluent builder that compiles down to SQL. Filters, pagination and terminal operations:
+```java
+List<Player> veterans = Caskara.query(Player.class)
+        .fieldGreaterOrEqual("level", 50)
+        .fieldNotEquals("banned", true)
+        .orderBy("level", Query.Order.DESC)
+        .page(1, 20)
+        .fetch();
+
+// Terminal operations that never materialise the objects
+long total     = Caskara.query(Player.class).fieldGreaterOrEqual("level", 50).count();
+boolean anyOp  = Caskara.query(Player.class).field("rank", "admin").exists();
+int purged     = Caskara.query(Session.class).fieldLessThan("lastSeen", cutoff).delete();
+```
+`count()` ignores `limit`/`offset` on purpose, so it answers "how many pages?" rather than
+"how many on this page?".
+
 ### Hooks & Validation
 Automate logic before or after data is touched.
 ```java
@@ -108,6 +126,23 @@ core.addValidator(p -> p.level > 0);
 
 // Log activity automatically
 core.onAfterSave((id, p) -> Logger.info("Player " + p.name + " was saved."));
+core.onAfterDelete(id -> Logger.info("Player " + id + " was removed."));
+```
+
+### Reactive Observers
+React to changes as they happen. A `null` value means the record was deleted:
+```java
+var core = Caskara.core(Player.class);
+
+core.observeAll((id, player) -> {
+    if (player == null) cache.evict(id);
+    else                cache.put(id, player);
+});
+
+// Watch a single record — and stop watching when it no longer matters
+BiConsumer<String, Player> watcher = (id, p) -> hud.refresh(p);
+core.observe(playerId, watcher);
+core.unobserveAll(playerId); // on disconnect, or the listener map grows forever
 ```
 
 ### Object Lifecycle: TTL & Soft Delete
@@ -154,9 +189,12 @@ Caskara.createIndex(Player.class, "stats.level");
 ### Performance Metrics
 Caskara tracks everything. Access the `Stats` engine to see how your mod is performing:
 ```java
-var stats = Caskara.stats();
+var stats = Caskara.stats();          // default shell only
 System.out.println("Cache Hit Rate: " + stats.getCacheHitRate() * 100 + "%");
 System.out.println("Avg Latency: " + stats.getAverageQueryTimeMs() + "ms");
+
+var global = Caskara.globalStats();   // aggregated across every open shell
+System.out.println("Queries server-wide: " + global.getTotalQueries());
 ```
 
 ---
@@ -227,6 +265,40 @@ Caskara has a built-in background scheduler that safely backs up all active SQLi
 ---
 
 ## 📝 Changelog
+
+### [Unreleased] - Audit & Hardening
+
+A full audit of the codebase. Several of these were silent data-loss bugs, so read the
+upgrade notes before touching a live server.
+
+#### 🐛 Critical Fixes
+*   **`save(obj, ttlMillis)` expired every record instantly**: the overload passed the duration where an *absolute* timestamp was expected, so records were stamped as expiring in 1970 and vanished on the next read — no error, no log. `save(obj, Duration)` was always correct; only the millisecond overload was broken.
+*   **Composite primary key**: `id` was the sole PRIMARY KEY while `type` was an ordinary column. Since every write is an `INSERT OR REPLACE`, saving two different entity types under the same id (a player name or UUID, say) silently destroyed the first one. The key is now `(id, type)`.
+*   **A bare `@TTL` deleted everything**: with both attributes defaulting to 0, `@TTL` alone meant "expires now". It is now ignored with a warning.
+*   **Schema migrations leaked plaintext**: after running a migrator the result was written back without re-encrypting, so reading an outdated `@Encrypted` record rewrote it in the clear.
+*   **Reading inside a transaction always failed**: `tx.load()` dispatched the read to another thread while the calling thread held the lock, deadlocking until the 5s timeout fired.
+*   **Nested transactions committed early**, breaking the atomicity of the outer block.
+*   **Stale FTS5 entries**: `INSERT OR REPLACE` does not fire `AFTER DELETE` triggers unless `recursive_triggers` is on, so the search index accumulated orphaned rows.
+*   **`@Id` inherited from a base class was ignored**, so `save(obj)` generated a fresh UUID on every call — one duplicate record per save.
+*   **SQL injection in `createIndex()`**: the field name was interpolated straight into DDL. It is now validated.
+
+#### ✨ Features
+*   **Query terminal operations**: `count()`, `exists()` and `delete()`, plus the `fieldNotEquals()`, `fieldGreaterOrEqual()` and `fieldLessOrEqual()` operators.
+*   **Observer lifecycle**: `discard()` and `softDelete()` now notify observers (a `null` value means "removed") and there is an `onAfterDelete()` hook. Subscriptions can finally be cancelled with `unobserve()` / `unobserveAll()` — the listener map previously only grew.
+*   **`Caskara.globalStats()`** aggregates metrics across every open shell.
+*   **Backup rotation**: keeps the 48 most recent backups per shell instead of growing forever (24 files/shell/day at the default hourly cadence).
+*   **Configurable read timeout** via `Pearl.setDefaultTimeout()` / `sync(timeout, unit)`, replacing the hard-coded 5s.
+*   **Export/import round-trips cleanly**: TTL, soft-delete state and schema version are now preserved.
+
+#### ⚠️ Upgrade Notes
+*   **The database is migrated in place on first open.** A consistent snapshot is written to `<shell>.db.pre-composite-key.bak` beforehand; if it cannot be created the migration aborts without touching your data. The rebuild runs in a transaction and is tracked with `PRAGMA user_version`, so it happens exactly once. **Back up your world before upgrading anyway.**
+*   Indexes created at runtime through `Caskara.createIndex()` live on the old table and are dropped by the rebuild. Those declared with `@Index` come back automatically; purely programmatic ones must be re-issued.
+*   `CaskaraAdminLogic.deleteEntity()` takes the entity type as a third argument now, since one id can legitimately map to several types.
+*   `@Id` always wins over the `id`/`uuid`/`uid` naming convention. Previously `getId()` and `syncId()` disagreed when the `@Id` field was null.
+*   Encryption is **AES-128/ECB**, not AES-256 as previously documented. See the threat model in `DOCS.md`.
+*   `./gradlew shadowJar` no longer deploys to a local Hytale install automatically — use `-Pdeploy`, or run `./gradlew deploy`.
+
+---
 
 ### [2.1.0] - Enterprise Scale Update
 
