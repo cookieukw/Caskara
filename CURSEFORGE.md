@@ -34,12 +34,26 @@ Plugin Code → Caskara API → Shell Controller
 └───────────────┘
 
 Internal:
-LRU Cache ↔ JSON Serializer ↔ AES-256 Encryption ↔ SQLite Storage
+LRU Cache ↔ JSON Serializer ↔ AES-128 Encryption ↔ SQLite Storage
 ```
 
 ---
 
-## ✨ What's New in Version 2.0.0
+## ✨ What's New
+
+### Version 3.0.0: Audit & Hardening
+
+A full audit of the codebase. Several fixes address **silent data-loss bugs** — read the
+upgrade notes at the bottom before updating a live server.
+
+*   **Fixed: `save(obj, ttlMillis)` made records vanish.** The overload passed a duration where an absolute timestamp was expected, stamping records as expiring in 1970. They disappeared on the next read with no error and no log.
+*   **Fixed: entities of different types overwrote each other.** `id` alone was the primary key, so a `Player` and an `Inventory` sharing an id (a player name or UUID) destroyed one another. The key is now `(id, type)`, migrated automatically.
+*   **Fixed: reading inside a transaction always failed** with a deadlock, and nested transactions committed early.
+*   **New Query operations**: `count()`, `exists()`, `delete()`, plus `fieldNotEquals()`, `fieldGreaterOrEqual()` and `fieldLessOrEqual()`.
+*   **Observers now fire on deletion** and can finally be unsubscribed with `unobserve()` / `unobserveAll()`.
+*   **Backup rotation**: keeps the 48 most recent backups per shell instead of growing forever.
+
+### Version 2.0.0
 
 *   **Annotations API**: Use annotations like `@CaskaraEntity`, `@Index`, `@TTL`, and `@Id` to configure your entities dynamically without boilerplate code!
 *   **Auto-Backup System**: Automatically backs up all your databases using native SQLite atomic backup APIs.
@@ -138,7 +152,7 @@ Caskara.restore("mod-123", ModData.class); // Bring it back!
 
 ## 🔐 Security: Transparent Encryption
 
-Secure sensitive data (like Discord tokens or private keys) with AES-256. Caskara handles encryption and decryption automatically during I/O.
+Secure sensitive data (like Discord tokens or private keys) with AES-128 (see the note below). Caskara handles encryption and decryption automatically during I/O.
 
 ```java
 // Call this once during initialization
@@ -197,17 +211,44 @@ Caskara has a powerful built-in **Auto-Backup System** that automatically backs 
 | **NoSQL Flexibility** | ✅ (JSON) | ❌ (Rigid) | ✅ |
 | **ACID Transactions** | ✅ Built-in | ✅ SQL | ✅ |
 | **Transparent Encryption** | ✅ 1-Line | ❌ Complex | ✅ |
-| **In-Memory Caching** | ✅ (LRU) | ❌ | ✅ |
+| **In-Memory Caching** | ✅ (Dynamic LRU) | ❌ | ✅ |
+| **Async Write Queue** | ✅ 100k+ TPS | ❌ Lock-heavy | ✅ |
 | **Setup Overhead** | Zero | High | High |
 | **Auto-Indexing** | ✅ | ❌ | ✅ |
 
 ---
 
-## 🛑 When NOT to use Caskara
+## 🛑 Scale and Limitations: When to migrate?
 
-- **Massive BLOB storage**: Do not store large images or videos. Use Hytale's asset system instead.
-- **Relational Complexity**: If your data requires 10+ table joins, use raw SQL.
-- **Global Shared Databases**: For multi-server clusters, use a dedicated external DB.
+Caskara is engineered to handle **colossal** amounts of data, provided your mod runs on a **Single Hytale Server**. Thanks to its Async Write-Ahead Queue, Caskara can easily absorb 50,000 to 100,000 asynchronous writes per second without blocking the main game thread. However, you must understand its architectural limits:
+
+**Do NOT use Caskara if:**
+- **You are building a Multi-Server Network (BungeeCord/Proxy Style)**: SQLite relies on physical file locks (`.db`). You cannot share a single Caskara database file across multiple physical servers running on different machines. Doing so over a network drive will cause data corruption. *Migration Path: If your mod grows to a multi-server network, you must migrate to a centralized database like MongoDB or MySQL.*
+- **You require heavy Relational Joins**: Caskara is a Document Store (NoSQL). While it supports indexing, if your data model requires complex joins across 10+ tables (e.g., highly relational web-app structures), you should use a raw SQL approach.
+- **You are storing BLOBs**: Do not store large images, videos, or schematics inside Caskara. Use Hytale's native asset system or standard flat-file storage for large binary files.
+
+---
+
+## 🔄 Legacy Data Auto-Migration & Safety Backups
+
+### Why the Change?
+Historically, older versions of Caskara used a single database named `default.db` by default. If multiple mods used Caskara on the same Hytale server without custom Shell configurations, they all read and wrote to the same file. This caused severe clashing and namespace conflicts. 
+
+To fix this, version `2.1.0` introduces **Namespace Isolation** via `Caskara.init("my_mod_id", folder)`. However, if you simply rename the file, you would either break other mods or lose your users' existing data.
+
+### How the Auto-Migration Works (Type Extraction)
+Caskara resolves this cleanly and safely using **Type-Based Data Extraction**:
+1. When you initialize your mod with its unique namespace (e.g. `my_mod_id.db`), Caskara detects if the legacy `default.db` still exists in the database directory.
+2. **Safety Backup**: Before touching any data, Caskara automatically duplicates the original legacy database file to `default.db.migration.bak` in the same directory.
+3. **Surgical Extraction**: Instead of moving the whole database (which would steal data belonging to other mods), Caskara opens `default.db`, extracts **only the rows matching the entity classes registered by your mod** (using the `type` column), and moves them into your new, isolated `my_mod_id.db` file.
+4. **Cleanup**: Once copied successfully, it deletes those specific rows from the old `default.db` file. 
+
+*Result:* Your mod gets its isolated database, other legacy mods can still read their own data from `default.db`, and you have a safety backup file (`default.db.migration.bak`) on disk in case you need to rollback.
+
+> [!NOTE]
+> **Who is affected?** This auto-migration ONLY runs for entities that were previously saved in the default global database (`default.db`). If your entities were configured to use custom databases via `@CaskaraEntity(shell = "my_custom_shell")`, they are already isolated and will not trigger or be affected by this migration.
+
+---
 
 ---
 
@@ -216,6 +257,43 @@ _Made with ❤️ for the Hytale community._
 ---
 
 ## 📝 Changelog
+
+### [3.0.0] - Audit & Hardening
+
+#### 🐛 Critical Fixes
+*   **`save(obj, ttlMillis)` expired every record instantly** — the duration was used as an absolute timestamp, so records were stamped as expiring in 1970 and vanished silently.
+*   **Composite primary key `(id, type)`** — previously `id` alone was the key, so two entity types sharing an id destroyed each other on save.
+*   **A bare `@TTL` deleted everything** — both attributes default to 0, which meant "expires now". Now ignored with a warning.
+*   **Schema migrations leaked plaintext** for `@Encrypted` entities.
+*   **`tx.load()` inside a transaction always deadlocked**, and nested transactions committed early.
+*   **Stale FTS5 search results** — `INSERT OR REPLACE` left orphaned rows in the index.
+*   **`@Id` inherited from a base class was ignored**, producing a duplicate record on every save.
+*   **SQL injection in `createIndex()`**.
+
+#### ✨ Features
+*   Query terminal operations `count()`, `exists()`, `delete()` and the `fieldNotEquals()` / `fieldGreaterOrEqual()` / `fieldLessOrEqual()` operators.
+*   Observers fire on deletion, `onAfterDelete()` hook, and `unobserve()` / `unobserveAll()` to cancel subscriptions.
+*   `Caskara.globalStats()` across every open shell.
+*   Backup rotation (48 most recent per shell).
+*   Configurable read timeout via `Pearl.setDefaultTimeout()`.
+*   Export/import preserves TTL, soft-delete state and schema version.
+
+#### ⚠️ Upgrade Notes
+*   **The database is migrated in place on first open.** A snapshot is written to `<shell>.db.pre-composite-key.bak` first, and the migration aborts untouched if that fails. **Back up your world anyway.**
+*   Runtime indexes from `Caskara.createIndex()` are dropped by the rebuild; `@Index` ones return automatically.
+*   `CaskaraAdminLogic.deleteEntity()` now requires the entity type as a third argument.
+*   Encryption is **AES-128/ECB**, not AES-256 as previously documented.
+
+---
+
+### [2.1.0] - Enterprise Scale Update
+
+#### ✨ Features
+*   **Async Write-Ahead Queue**: All asynchronous write operations (`preserveAsync`, `discardAsync`) are now completely lock-free for the calling thread. They drop instantly into a background `LinkedBlockingQueue` where a dedicated Worker Thread processes them using SQLite Batch Transactions, yielding up to a 100x write throughput increase!
+*   **Dynamic LRU Cache**: The hardcoded 500-item cache limit has been removed. You can now use `@Cache(maxSize = 2000)` on your entities or call `Core.setCacheSize(int)` dynamically to dedicate more RAM to active entities.
+*   **Namespace Isolation**: To prevent multiple mods from clashing over `default.db`, you must now initialize Caskara with a namespace: `Caskara.init("my_mod_id", folder)`. The old `init(File)` is deprecated but remains backward-compatible to prevent data loss.
+
+---
 
 ### [2.0.1] - Hotfix & Command Parsing Update
 

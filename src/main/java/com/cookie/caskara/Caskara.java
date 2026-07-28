@@ -1,7 +1,6 @@
 package com.cookie.caskara;
 
 import com.cookie.caskara.annotations.CaskaraEntity;
-import com.cookie.caskara.annotations.Id;
 import com.cookie.caskara.commands.CaskaraAdminLogic;
 import com.cookie.caskara.commands.CaskaraCommand;
 import com.cookie.caskara.db.Core;
@@ -10,6 +9,7 @@ import com.cookie.caskara.db.Shell;
 import com.cookie.caskara.db.Stats;
 import com.cookie.caskara.db.Transaction;
 import com.cookie.caskara.util.PackageScanner;
+import com.cookie.caskara.utils.CaskaraLogger;
 import com.hypixel.hytale.server.core.command.system.CommandRegistry;
 import com.hypixel.hytale.server.core.universe.world.World;
 import java.io.File;
@@ -34,6 +34,7 @@ import com.google.gson.JsonObject;
 public class Caskara {
     private static File dataFolder;
     private static final Map<String, Shell> shells = new ConcurrentHashMap<>();
+    private static String defaultNamespace = "default";
     
     private static ScheduledExecutorService scheduler;
     private static ScheduledFuture<?> autoVacuumTask;
@@ -44,10 +45,12 @@ public class Caskara {
     }
 
     /**
-     * Initializes the Caskara API.
+     * Initializes the Caskara API with a unique namespace per mod.
+     * @param modId The unique identifier of your mod (e.g. "my_awesome_mod").
      * @param folder The root folder for all shells.
      */
-    public static void init(File folder) {
+    public static void init(String modId, File folder) {
+        defaultNamespace = modId;
         dataFolder = folder;
         if (!dataFolder.exists()) {
             dataFolder.mkdirs();
@@ -61,18 +64,23 @@ public class Caskara {
     }
 
     /**
+     * Initializes the Caskara API.
+     * @param folder The root folder for all shells.
+     * @deprecated Use {@link #init(String, File)} instead to prevent data conflicts with other mods using "default.db".
+     */
+    @Deprecated
+    public static void init(File folder) {
+        CaskaraLogger.warn("Caskara.init(File) is deprecated! Please migrate to Caskara.init(modId, File) to avoid default.db conflicts with other mods.");
+        init("default", folder);
+    }
+
+    /**
      * Enables or changes the Auto-Vacuum interval in hours.
      * If 0 or negative, cancels the current Auto-Vacuum task.
      */
-    public static void enableAutoVacuum(long periodHours) {
-        if (scheduler == null) {
-            scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread t = new Thread(r, "Caskara-AutoVacuum");
-                t.setDaemon(true);
-                return t;
-            });
-        }
-        
+    public static synchronized void enableAutoVacuum(long periodHours) {
+        ensureScheduler();
+
         if (autoVacuumTask != null && !autoVacuumTask.isCancelled()) {
             autoVacuumTask.cancel(false);
         }
@@ -80,7 +88,7 @@ public class Caskara {
         if (periodHours > 0) {
             autoVacuumTask = scheduler.scheduleAtFixedRate(() -> {
                 try {
-                    com.cookie.caskara.commands.CaskaraAdminLogic.runVacuum();
+                    CaskaraAdminLogic.runVacuum();
                 } catch (Exception ignored) {}
             }, periodHours, periodHours, TimeUnit.HOURS);
         }
@@ -90,15 +98,9 @@ public class Caskara {
      * Enables or changes the Auto-Backup interval in hours.
      * If 0 or negative, cancels the current Auto-Backup task.
      */
-    public static void enableAutoBackup(long periodHours) {
-        if (scheduler == null) {
-            scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread t = new Thread(r, "Caskara-Scheduler");
-                t.setDaemon(true);
-                return t;
-            });
-        }
-        
+    public static synchronized void enableAutoBackup(long periodHours) {
+        ensureScheduler();
+
         if (autoBackupTask != null && !autoBackupTask.isCancelled()) {
             autoBackupTask.cancel(false);
         }
@@ -116,11 +118,23 @@ public class Caskara {
      * Safely terminates all Caskara background tasks.
      * Ideal to be called during the Hytale server shutdown process.
      */
-    public static void shutdown() {
+    private static void ensureScheduler() {
+        if (scheduler == null || scheduler.isShutdown()) {
+            scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "Caskara-Scheduler");
+                t.setDaemon(true);
+                return t;
+            });
+        }
+    }
+
+    public static synchronized void shutdown() {
         if (scheduler != null) {
             scheduler.shutdownNow();
             scheduler = null;
         }
+        autoVacuumTask = null;
+        autoBackupTask = null;
         for (Shell shell : shells.values()) {
             try {
                 shell.close();
@@ -135,22 +149,35 @@ public class Caskara {
      * Opens a global Shell by name.
      */
     public static Shell shell(String name) {
-        return shells.computeIfAbsent("global:" + name, 
+        requireInitialized();
+        return shells.computeIfAbsent("global:" + name,
             n -> new Shell(new File(dataFolder, "global/" + name + ".db")));
     }
 
     /**
-     * Opens the default global Shell.
+     * Fails fast with a readable message instead of silently writing shells to a
+     * relative path when init() was never called.
+     */
+    private static void requireInitialized() {
+        if (dataFolder == null) {
+            throw new IllegalStateException(
+                "Caskara has not been initialized. Call Caskara.init(modId, dataFolder) during your plugin's setup() before using the API.");
+        }
+    }
+
+    /**
+     * Opens the default global Shell for this mod's namespace.
      */
     public static Shell shell() {
-        return shell("default");
+        return shell(defaultNamespace);
     }
 
     /**
      * Opens a Shell dedicated to a specific world.
      */
     public static Shell shell(World world, String name) {
-        return shells.computeIfAbsent("world:" + world.getName() + ":" + name, 
+        requireInitialized();
+        return shells.computeIfAbsent("world:" + world.getName() + ":" + name,
             n -> new Shell(new File(dataFolder, "worlds/" + world.getName() + "/" + name + ".db")));
     }
 
@@ -208,11 +235,15 @@ public class Caskara {
     }
 
     /**
-     * Saves an object with an automatic UUID and specific TTL.
+     * Saves an object with an automatic UUID and a TTL expressed as a duration in
+     * milliseconds (i.e. the record expires {@code ttlMillis} from now).
      */
     @SuppressWarnings("unchecked")
     public static <T> String save(T object, long ttlMillis) {
-        return core((Class<T>) object.getClass()).preserve(null, object, ttlMillis);
+        // preserve()'s third parameter is an ABSOLUTE epoch timestamp. Passing ttlMillis
+        // straight through made every record expire in 1970, silently hiding the data.
+        Long expiresAt = ttlMillis > 0 ? System.currentTimeMillis() + ttlMillis : null;
+        return core((Class<T>) object.getClass()).preserve(null, object, expiresAt);
     }
 
     /**
@@ -325,7 +356,16 @@ public class Caskara {
      */
     public static <T> void rotateKey(Class<T> clazz, String oldKey, String newKey) {
         encrypt(clazz, oldKey);
+        long expected = core(clazz).count();
         List<T> allData = list(clazz);
+        if (allData.size() != expected) {
+            // Records that fail to decrypt are dropped by extractAll(). Re-keying now
+            // would leave them permanently unreadable, so abort while oldKey still works.
+            encrypt(clazz, oldKey);
+            throw new com.cookie.caskara.exceptions.DatabaseException(
+                "Aborting key rotation for " + clazz.getSimpleName() + ": only " + allData.size()
+                + " of " + expected + " records could be decrypted with the old key. No data was changed.");
+        }
         encrypt(clazz, newKey);
         for (T data : allData) {
             String id = getId(data);
@@ -345,10 +385,25 @@ public class Caskara {
     }
 
     /**
-     * Gets performance metrics for the default shell.
+     * Gets performance metrics for the default shell only.
+     * For a server-wide view across every open shell, use {@link #globalStats()}.
      */
     public static Stats stats() {
         return shell().getStats();
+    }
+
+    /**
+     * Aggregates metrics across every open shell into a detached snapshot.
+     * <p>
+     * The returned Stats is a copy — it does not keep updating and writing to it has no
+     * effect on the live counters.
+     */
+    public static Stats globalStats() {
+        Stats snapshot = new Stats();
+        for (Shell shell : shells.values()) {
+            snapshot.merge(shell.getStats());
+        }
+        return snapshot;
     }
 
     /**
@@ -389,28 +444,18 @@ public class Caskara {
      */
     public static String getId(Object object) {
         if (object == null) return null;
-        
-        // 1. Check for @Id annotation
-        for (Field field : object.getClass().getDeclaredFields()) {
-            if (field.isAnnotationPresent(Id.class)) {
-                try {
-                    field.setAccessible(true);
-                    Object val = field.get(object);
-                    if (val != null) return val.toString();
-                } catch (Exception ignored) {}
-            }
+
+        // Shares Core's resolver so both sides agree on which field is the id,
+        // including fields inherited from a base entity class.
+        Field field = Core.findIdField(object.getClass());
+        if (field == null) return null;
+        try {
+            field.setAccessible(true);
+            Object val = field.get(object);
+            return val != null ? val.toString() : null;
+        } catch (Exception ignored) {
+            return null;
         }
-        
-        // 2. Fallback to name-based conventions
-        for (String fName : new String[]{"id", "uuid", "uid"}) {
-            try {
-                Field field = object.getClass().getDeclaredField(fName);
-                field.setAccessible(true);
-                Object val = field.get(object);
-                if (val != null) return val.toString();
-            } catch (Exception ignored) {}
-        }
-        return null;
     }
 
     /**

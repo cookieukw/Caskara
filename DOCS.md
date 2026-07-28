@@ -19,7 +19,7 @@ Caskara is a **data engine library for Hytale mods**. It wraps SQLite with a JSO
    - [Pearl\<T\>](#6-pearlt)
    - [Stats](#7-stats)
 6. [Advanced Features](#advanced-features)
-   - [AES-256 Encryption](#aes-256-encryption)
+   - [AES-128 Encryption](#aes-128-encryption)
    - [Schema Migrations](#schema-migrations)
    - [TTL (Time To Live)](#ttl-time-to-live)
    - [Soft Delete & Restore](#soft-delete--restore)
@@ -93,7 +93,7 @@ Plugin Code
 Caskara (static API)
     │
     ├─► Shell ("global/default.db")
-    │       └─► Core<PlayerData>   ─► LRU Cache ─► Gson (JSON) ─► AES-256 ─► SQLite
+    │       └─► Core<PlayerData>   ─► LRU Cache ─► Gson (JSON) ─► AES-128 ─► SQLite
     │       └─► Core<QuestData>    ─► LRU Cache ─► Gson (JSON) ──────────►  SQLite
     │
     └─► Shell ("worlds/Orbis/spawn.db")
@@ -310,6 +310,12 @@ Core<PlayerProfile> core = Caskara.core(PlayerProfile.class);
 | `preserveAsync(String id, T element)`                                 | Non-blocking save. Returns `CompletableFuture<String>`.                |
 | `extract(String id)`                                                  | Loads by ID, returns `Pearl<T>`.                                       |
 | `extractAll()`                                                        | Returns `List<T>` of all active, non-expired, non-deleted records.     |
+| `count()`                                                             | Counts active records without deserialising or decrypting them.        |
+| `onAfterDelete(Consumer<String>)`                                     | Hook fired after `discard()` / `softDelete()`.                         |
+| `unobserve(String id, BiConsumer)`                                    | Removes one observer registered for that id.                           |
+| `unobserveAll(String id)`                                             | Removes every observer for that id (call it when a player leaves).     |
+| `unobserveAll(BiConsumer)`                                            | Removes an observer registered via `observeAll`.                       |
+| `getObservedIdCount()`                                                | How many ids currently hold observers — useful to spot leaks.          |
 | `discard(String id)`                                                  | Physically deletes the record.                                         |
 | `softDelete(String id)`                                               | Sets `deleted_at` timestamp; record is hidden from queries.            |
 | `restore(String id)`                                                  | Clears `deleted_at`; record becomes visible again.                     |
@@ -344,6 +350,9 @@ List<PlayerProfile> results = Caskara.query(PlayerProfile.class)
 | `field(String name, Object value)`            | Exact match: `json_extract(json, '$.name') = value`.      |
 | `fieldGreaterThan(String name, Object value)` | Greater-than comparison on a JSON field.                  |
 | `fieldLessThan(String name, Object value)`    | Less-than comparison on a JSON field.                     |
+| `fieldGreaterOrEqual(String name, Object v)`  | `>=` comparison on a JSON field.                          |
+| `fieldLessOrEqual(String name, Object v)`     | `<=` comparison on a JSON field.                          |
+| `fieldNotEquals(String name, Object value)`   | Differs from value. Records missing the field don't match.|
 | `fieldIn(String name, List<Object> values)`   | Matches any value in the list (SQL `IN`).                 |
 | `fieldContains(String name, String text)`     | SQL `LIKE '%text%'` on a JSON string field.               |
 | `orderBy(String field, Order direction)`      | Sort by a JSON field. Use `Query.Order.ASC` or `DESC`.    |
@@ -353,6 +362,9 @@ List<PlayerProfile> results = Caskara.query(PlayerProfile.class)
 | `fetch()`                                     | Executes and returns `List<T>` (blocking).                |
 | `fetchAsync()`                                | Non-blocking; returns `CompletableFuture<List<T>>`.       |
 | `fetchFirst()`                                | Returns `Pearl<T>` with the first result.                 |
+| `count()`                                     | Counts matches without deserialising. Ignores limit/offset. |
+| `exists()`                                    | True if at least one record matches.                      |
+| `delete()`                                    | Deletes every match; returns how many were removed.       |
 | `search(String text)`                         | SQLite FTS5 instant text match across the entire JSON.    |
 
 ### Ultra-Fast Full-Text Search (FTS5)
@@ -526,9 +538,25 @@ System.out.println("Total queries:  " + stats.getTotalQueries());
 
 ## Advanced Features
 
-### AES-256 Encryption
+### AES-128 Encryption
 
-Caskara can store data as AES-encrypted Base64 blobs. The key is derived using SHA-256.
+Caskara can store data as AES-encrypted Base64 blobs. The key is derived by hashing your
+passphrase with SHA-256 and taking the first 16 bytes (AES-128).
+
+> **Threat model — read this before relying on it.**
+> The implementation uses `Cipher.getInstance("AES")`, which resolves to
+> **AES-128/ECB/PKCS5Padding**: no IV, no salt, no authentication tag. In practice:
+> - identical plaintexts always produce identical ciphertexts, so someone with file access
+>   can tell which records are equal;
+> - the ciphertext is malleable — there is no integrity check;
+> - key derivation is a single unsalted SHA-256 pass, so security rests entirely on the
+>   passphrase (no KDF stretching).
+>
+> This is adequate for keeping tokens out of plain sight inside a `.db` file that server
+> admins already control. It is **not** a substitute for real at-rest encryption of highly
+> sensitive data. A future major version should move to AES-GCM with a per-record random IV
+> and PBKDF2/Argon2 derivation, behind a versioned ciphertext envelope so existing data can
+> be migrated.
 
 ```java
 // Call before any save operations for that class

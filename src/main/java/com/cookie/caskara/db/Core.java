@@ -1,5 +1,6 @@
 package com.cookie.caskara.db;
 
+import com.cookie.caskara.annotations.Cache;
 import com.cookie.caskara.annotations.Encrypted;
 import com.cookie.caskara.annotations.FullTextSearch;
 import com.cookie.caskara.annotations.Id;
@@ -11,14 +12,17 @@ import com.cookie.caskara.exceptions.ValidationException;
 
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -44,30 +48,29 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
-import com.hypixel.hytale.logger.HytaleLogger;
+import com.cookie.caskara.utils.CaskaraLogger;
 
 /**
  * A 'Core' represents a collection of a specific type within a Shell.
  */
 public class Core<T> {
     private static final Gson GSON = new GsonBuilder().serializeNulls().create();
+    /** Identifiers safe to interpolate into DDL (see {@link #createIndex(String)}). */
+    private static final java.util.regex.Pattern JSON_FIELD_PATTERN =
+            java.util.regex.Pattern.compile("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*");
     private final Shell shell;
     private final Class<T> clazz;
     private final String typeName;
     
     // Simple LRU Cache (Least Recently Used)
-    private final int MAX_CACHE_SIZE = 500;
-    private final Map<String, T> cache = Collections.synchronizedMap(new LinkedHashMap<>(MAX_CACHE_SIZE, 0.75f, true) {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<String, T> eldest) {
-            return size() > MAX_CACHE_SIZE;
-        }
-    });
+    private int maxCacheSize = 500;
+    private Map<String, T> cache;
 
     // Hooks & Validation (Phase 2)
     private final List<BiConsumer<String, T>> beforeSaveHooks = new ArrayList<>();
     private final List<BiConsumer<String, T>> afterSaveHooks = new ArrayList<>();
     private final List<Consumer<String>> beforeDeleteHooks = new ArrayList<>();
+    private final List<Consumer<String>> afterDeleteHooks = new ArrayList<>();
     private final List<Predicate<T>> validators = new ArrayList<>();
 
     // Migration System (Phase 6)
@@ -93,15 +96,51 @@ public class Core<T> {
         return shell;
     }
 
+    public void setCacheSize(int newSize) {
+        // LinkedHashMap rejects a negative initial capacity, and a 0-sized cache
+        // would evict every entry immediately. Clamp to a sane minimum.
+        this.maxCacheSize = Math.max(1, newSize);
+        Map<String, T> newCache = Collections.synchronizedMap(new LinkedHashMap<>(this.maxCacheSize, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<String, T> eldest) {
+                return size() > maxCacheSize;
+            }
+        });
+        if (this.cache != null) {
+            newCache.putAll(this.cache);
+        }
+        this.cache = newCache;
+    }
+
     public Core(Shell shell, Class<T> clazz) {
         this.shell = shell;
         this.clazz = clazz;
         this.typeName = clazz.getSimpleName().toLowerCase();
 
+
+        // Check if we need to auto-migrate legacy data from default.db
+        if (!shell.getShellFile().getName().equals("default.db")) {
+            autoMigrateLegacyData();
+        }
+
+        // Parse @Cache
+        Cache cacheAnn = clazz.getAnnotation(Cache.class);
+        if (cacheAnn != null) {
+            this.maxCacheSize = cacheAnn.maxSize();
+        }
+        setCacheSize(this.maxCacheSize);
+
         // Parse @TTL
         TTL ttl = clazz.getAnnotation(TTL.class);
         if (ttl != null) {
-            this.defaultTtlMillis = (ttl.minutes() * 60_000L) + (ttl.seconds() * 1000L);
+            long millis = (ttl.minutes() * 60_000L) + (ttl.seconds() * 1000L);
+            // A bare @TTL (both values 0) previously meant "expires_at = now",
+            // silently discarding every record. Treat it as "no TTL" instead.
+            if (millis > 0) {
+                this.defaultTtlMillis = millis;
+            } else {
+                CaskaraLogger.warn("@TTL on " + typeName + " has minutes=0 and seconds=0; ignoring it (no expiration applied).");
+            }
         }
 
         // Parse @Index and @Indices
@@ -123,6 +162,81 @@ public class Core<T> {
             }
             this.isFtsEnabled = true;
             initializeFts();
+        }
+    }
+    private void autoMigrateLegacyData() {
+        File folder = shell.getShellFile().getParentFile();
+        File legacyFile = new File(folder, "default.db");
+        
+        if (!legacyFile.exists()) {
+            return;
+        }
+
+        // Backup legacy database
+        File backupFile = new File(folder, "default.db.migration.bak");
+        if (!backupFile.exists()) {
+            try {
+                Files.copy(legacyFile.toPath(), backupFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                CaskaraLogger.info("Created safety backup of legacy default.db before migration.");
+            } catch (Exception e) {
+                System.err.println("[Caskara] Failed to backup legacy database: " + e.getMessage());
+                return; // Abort migration if we can't backup safely
+            }
+        }
+
+        // We only extract this specific 'type'
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            System.err.println("[Caskara] SQLite JDBC driver not found: " + e.getMessage());
+            return;
+        }
+
+        try (Connection legacyConn = DriverManager.getConnection("jdbc:sqlite:" + legacyFile.getAbsolutePath());
+             PreparedStatement selectStmt = legacyConn.prepareStatement("SELECT * FROM elements WHERE type = ?");
+             PreparedStatement deleteStmt = legacyConn.prepareStatement("DELETE FROM elements WHERE type = ?")) {
+             
+             selectStmt.setString(1, this.typeName);
+             
+             try (ResultSet rs = selectStmt.executeQuery()) {
+                 final boolean[] hasData = {false};
+                 // Insert into current shell
+                 shell.transaction(tx -> {
+                     try {
+                         String insertSql = "INSERT OR REPLACE INTO elements (id, type, json, expires_at, deleted_at, version) VALUES (?, ?, ?, ?, ?, ?)";
+                         try (PreparedStatement insertStmt = shell.getConnection().prepareStatement(insertSql)) {
+                             while (rs.next()) {
+                                 hasData[0] = true;
+                                 insertStmt.setString(1, rs.getString("id"));
+                                 insertStmt.setString(2, rs.getString("type"));
+                                 insertStmt.setString(3, rs.getString("json"));
+                                 insertStmt.setObject(4, rs.getObject("expires_at"));
+                                 insertStmt.setObject(5, rs.getObject("deleted_at"));
+                                 int version = rs.getInt("version");
+                                 if (rs.wasNull()) {
+                                     version = 1;
+                                 }
+                                 insertStmt.setInt(6, version);
+                                 insertStmt.addBatch();
+                             }
+                             if (hasData[0]) {
+                                 insertStmt.executeBatch();
+                             }
+                         }
+                     } catch (SQLException e) {
+                         throw new RuntimeException(e);
+                     }
+                 });
+                 
+                 // If we successfully moved data, delete it from the legacy database
+                 if (hasData[0]) {
+                     deleteStmt.setString(1, this.typeName);
+                     deleteStmt.executeUpdate();
+                     CaskaraLogger.info("Successfully migrated " + this.typeName + " data from legacy default.db to " + shell.getShellFile().getName());
+                 }
+             }
+        } catch (SQLException e) {
+            System.err.println("[Caskara] Failed to auto-migrate legacy data for " + this.typeName + ": " + e.getMessage());
         }
     }
 
@@ -239,11 +353,7 @@ public class Core<T> {
         }
 
         // Trigger Reactive Observers
-        genericListeners.forEach(l -> l.accept(finalId, element));
-        List<BiConsumer<String, T>> specific = listeners.get(finalId);
-        if (specific != null) {
-            specific.forEach(l -> l.accept(finalId, element));
-        }
+        notifyObservers(finalId, element);
 
         return id;
     }
@@ -253,12 +363,38 @@ public class Core<T> {
     }
 
     public CompletableFuture<String> preserveAsync(String id, T element) {
-        return CompletableFuture.supplyAsync(() -> preserve(id, element), shell.getExecutor());
+        return preserveAsync(id, element, 0L);
     }
 
     public CompletableFuture<String> preserveAsync(String id, T element, long ttlMillis) {
-        long expiresAt = System.currentTimeMillis() + ttlMillis;
-        return CompletableFuture.supplyAsync(() -> preserve(id, element, expiresAt), shell.getExecutor());
+        Long expiresAtMillis = ttlMillis > 0 ? System.currentTimeMillis() + ttlMillis : null;
+        String finalId = (id == null || id.isEmpty()) ? UUID.randomUUID().toString() : id;
+        syncId(finalId, element);
+        
+        CompletableFuture<String> future = new CompletableFuture<>();
+        shell.enqueueWrite(() -> {
+            try {
+                // By calling preserve with finalId, it avoids generating a new UUID.
+                preserve(finalId, element, expiresAtMillis);
+                future.complete(finalId);
+            } catch (Exception e) {
+                future.completeExceptionally(e);
+            }
+        });
+        return future;
+    }
+
+    public CompletableFuture<Void> discardAsync(String id) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        shell.enqueueWrite(() -> {
+            try {
+                discard(id);
+                future.complete(null);
+            } catch (Exception e) {
+                future.completeExceptionally(e);
+            }
+        });
+        return future;
     }
 
     /**
@@ -278,32 +414,44 @@ public class Core<T> {
         }
         shell.getStats().recordCacheMiss();
 
-        CompletableFuture<T> future = CompletableFuture.supplyAsync(() -> shell.runInLock(() -> {
-            String sql = "SELECT json, version, expires_at FROM elements WHERE id = ? AND type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)";
-            try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
-                pstmt.setString(1, id);
-                pstmt.setString(2, typeName);
-                pstmt.setLong(3, System.currentTimeMillis());
-                try (ResultSet rs = pstmt.executeQuery()) {
-                    if (rs.next()) {
-                        String json = rs.getString("json");
-                        int dbVersion = rs.getInt("version");
-                        long exp = rs.getLong("expires_at");
-                        Long expiresAt = rs.wasNull() ? null : exp;
-                        return applyMigrations(id, json, dbVersion, expiresAt);
-                    }
-                }
-            } catch (SQLException e) {
-                throw new DatabaseException("Failed to extract element from Core: " + id, e);
-            }
-            return null;
-        }), shell.getExecutor());
+        // If the caller already owns the shell lock (inside transaction()/runInLock),
+        // handing the read to another thread would block on a lock this thread holds
+        // and deadlock until Pearl.sync() times out. Read inline in that case.
+        if (shell.isLockHeldByCurrentThread() || shell.getExecutor().isShutdown()) {
+            T value = shell.runInLock(() -> readFromDb(id));
+            return new Pearl<>(value);
+        }
+
+        CompletableFuture<T> future =
+                CompletableFuture.supplyAsync(() -> shell.runInLock(() -> readFromDb(id)), shell.getExecutor());
         return new Pearl<>(future);
+    }
+
+    /** Reads a single row and materialises it. Must be called while holding the shell lock. */
+    private T readFromDb(String id) {
+        String sql = "SELECT json, version, expires_at FROM elements WHERE id = ? AND type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)";
+        try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
+            pstmt.setString(1, id);
+            pstmt.setString(2, typeName);
+            pstmt.setLong(3, System.currentTimeMillis());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    String json = rs.getString("json");
+                    int dbVersion = rs.getInt("version");
+                    long exp = rs.getLong("expires_at");
+                    Long expiresAt = rs.wasNull() ? null : exp;
+                    return applyMigrations(id, json, dbVersion, expiresAt);
+                }
+            }
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to extract element from Core: " + id, e);
+        }
+        return null;
     }
 
     /**
      * Discards an element from the shell.
-     * Triggers before delete hooks.
+     * Triggers before/after delete hooks and notifies observers with a null value.
      */
     public void discard(String id) {
         // Trigger Before Delete Hooks
@@ -323,6 +471,24 @@ public class Core<T> {
             }
             return null;
         });
+
+        for (Consumer<String> hook : afterDeleteHooks) {
+            hook.accept(id);
+        }
+        notifyObservers(id, null);
+    }
+
+    /**
+     * Notifies generic and per-id observers. A {@code null} value means the element was
+     * deleted — previously only preserve() emitted events, so anything relying on
+     * observeAll() to mirror state never learned about deletions.
+     */
+    private void notifyObservers(String id, T value) {
+        genericListeners.forEach(l -> l.accept(id, value));
+        List<BiConsumer<String, T>> specific = listeners.get(id);
+        if (specific != null) {
+            specific.forEach(l -> l.accept(id, value));
+        }
     }
 
     // Phase 2 Registration Methods
@@ -339,6 +505,13 @@ public class Core<T> {
         this.beforeDeleteHooks.add(hook);
     }
 
+    /**
+     * Runs after an element is removed by {@link #discard(String)} or {@link #softDelete(String)}.
+     */
+    public void onAfterDelete(Consumer<String> hook) {
+        this.afterDeleteHooks.add(hook);
+    }
+
     public void addValidator(Predicate<T> validator) {
         this.validators.add(validator);
     }
@@ -347,6 +520,12 @@ public class Core<T> {
      * Creates an index on a JSON field for faster queries.
      */
     public void createIndex(String jsonField) {
+        // jsonField is interpolated into DDL (SQLite cannot bind identifiers or JSON
+        // paths in CREATE INDEX), so it must be validated instead of trusted.
+        if (jsonField == null || !JSON_FIELD_PATTERN.matcher(jsonField).matches()) {
+            throw new ValidationException("Invalid index field name: '" + jsonField
+                    + "'. Only letters, digits, '_' and '.' are allowed.");
+        }
         shell.runInLock(() -> {
             String indexName = "idx_" + typeName + "_" + jsonField.replace(".", "_");
             String sql = "CREATE INDEX IF NOT EXISTS " + indexName + 
@@ -391,6 +570,25 @@ public class Core<T> {
     }
 
     /**
+     * Counts the live (non-deleted, non-expired) records of this type without
+     * deserialising or decrypting them.
+     */
+    public long count() {
+        return shell.runInLock(() -> {
+            String sql = "SELECT COUNT(*) FROM elements WHERE type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)";
+            try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
+                pstmt.setString(1, typeName);
+                pstmt.setLong(2, System.currentTimeMillis());
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    return rs.next() ? rs.getLong(1) : 0L;
+                }
+            } catch (SQLException e) {
+                throw new DatabaseException("Failed to count elements of type: " + typeName, e);
+            }
+        });
+    }
+
+    /**
      * Registers a migration function for a specific version.
      */
     public void registerMigration(int version, Function<JsonObject, JsonObject> migrator) {
@@ -412,6 +610,47 @@ public class Core<T> {
      */
     public void observeAll(BiConsumer<String, T> observer) {
         genericListeners.add(observer);
+    }
+
+    /**
+     * Removes a single observer previously registered with {@link #observe(String, BiConsumer)}.
+     * <p>
+     * Without this, a server that registers an observer per joining player accumulates
+     * entries in the listener map forever — one of the few unbounded structures in Caskara.
+     *
+     * @return true if the observer was found and removed
+     */
+    public boolean unobserve(String id, BiConsumer<String, T> observer) {
+        List<BiConsumer<String, T>> specific = listeners.get(id);
+        if (specific == null) {
+            return false;
+        }
+        boolean removed = specific.remove(observer);
+        if (specific.isEmpty()) {
+            // remove(key, value) so we never drop a list another thread just populated
+            listeners.remove(id, specific);
+        }
+        return removed;
+    }
+
+    /**
+     * Removes every observer registered for the given id.
+     * Call this when the subject goes away (e.g. a player disconnects).
+     */
+    public void unobserveAll(String id) {
+        listeners.remove(id);
+    }
+
+    /**
+     * Removes an observer registered with {@link #observeAll(BiConsumer)}.
+     */
+    public boolean unobserveAll(BiConsumer<String, T> observer) {
+        return genericListeners.remove(observer);
+    }
+
+    /** Number of ids currently holding at least one observer. Useful to spot leaks. */
+    public int getObservedIdCount() {
+        return listeners.size();
     }
 
     public void setSecurityKey(String key) {
@@ -478,7 +717,9 @@ public class Core<T> {
                 try {
                     String sql = "UPDATE elements SET json = ?, version = ? WHERE id = ? AND type = ?";
                     try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
-                        pstmt.setString(1, finalJson);
+                        // Must be re-encrypted: writing finalJson raw would silently
+                        // store plaintext for @Encrypted entities.
+                        pstmt.setString(1, encrypt(finalJson));
                         pstmt.setInt(2, newVersion);
                         pstmt.setString(3, id);
                         pstmt.setString(4, typeName);
@@ -493,8 +734,7 @@ public class Core<T> {
             if (expiresAt == null) cache.put(id, obj);
             return obj;
         } catch (JsonSyntaxException | IllegalStateException e) {
-            HytaleLogger.forEnclosingClass().atWarning()
-                .log("Caskara: Failed to read element ID " + id + " of type " + typeName + 
+            CaskaraLogger.warn("Caskara: Failed to read element ID " + id + " of type " + typeName + 
                      ". The data might be corrupted or an incorrect encryption key was used.");
             // Ignore the error when trying to read encrypted JSON as plain text (when the security key was not set)
             return null;
@@ -505,6 +745,10 @@ public class Core<T> {
      * Marks an element as deleted without removing it from the database (Soft Delete).
      */
     public void softDelete(String id) {
+        for (Consumer<String> hook : beforeDeleteHooks) {
+            hook.accept(id);
+        }
+
         shell.runInLock(() -> {
             String sql = "UPDATE elements SET deleted_at = ? WHERE id = ? AND type = ?";
             try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
@@ -518,6 +762,11 @@ public class Core<T> {
             }
             return null;
         });
+
+        for (Consumer<String> hook : afterDeleteHooks) {
+            hook.accept(id);
+        }
+        notifyObservers(id, null);
     }
 
     /**
@@ -550,42 +799,60 @@ public class Core<T> {
      */
     private void syncId(String id, T element) {
         if (element == null || id == null) return;
-        
-        boolean synced = false;
-        
-        // 1. Try @Id annotation
-        for (Field field : clazz.getDeclaredFields()) {
-            if (field.isAnnotationPresent(Id.class)) {
-                try {
-                    field.setAccessible(true);
-                    Object current = field.get(element);
-                    if (current == null || (current instanceof String && ((String) current).isEmpty())) {
-                        field.set(element, id);
-                    }
-                    synced = true;
-                    break;
-                } catch (Exception ignored) {}
-            }
-        }
-        
-        if (synced) return;
 
-        // 2. Fallback to name-based conventions
-        for (String fName : new String[]{"id", "uuid", "uid"}) {
-            try {
-                Field field = clazz.getDeclaredField(fName);
-                field.setAccessible(true);
-                Object current = field.get(element);
-                // Inject the DB id if the field is null OR empty string
-                if (current == null || (current instanceof String && ((String) current).isEmpty())) {
-                    field.set(element, id);
+        Field target = findIdField(clazz);
+        if (target == null) return;
+
+        try {
+            target.setAccessible(true);
+            Object current = target.get(element);
+            // Inject the DB id if the field is null OR empty string
+            if (current == null || (current instanceof String && ((String) current).isEmpty())) {
+                target.set(element, id);
+            }
+        } catch (Exception ignored) {
+            // Fail silently for reflection sync
+        }
+    }
+
+    /**
+     * Locates the id field of an entity, walking up the class hierarchy.
+     * <p>
+     * Both this and {@link com.cookie.caskara.Caskara#getId(Object)} used to call
+     * {@code getDeclaredFields()} on the concrete class only, so an entity inheriting its
+     * {@code @Id} (or its {@code id} field) from a base class was never recognised: the id
+     * was silently not injected and {@code save(obj)} generated a fresh UUID on every call.
+     *
+     * @return the annotated or conventionally-named field, or null if there is none
+     */
+    public static Field findIdField(Class<?> type) {
+        // 1. @Id annotation anywhere in the hierarchy
+        for (Class<?> c = type; c != null && c != Object.class; c = c.getSuperclass()) {
+            for (Field field : c.getDeclaredFields()) {
+                if (field.isAnnotationPresent(Id.class)) {
+                    return field;
                 }
-                break;
-            } catch (NoSuchFieldException ignored) {
-            } catch (Exception e) {
-                // Fail silently for reflection sync
             }
         }
+        // 2. Fallback to name-based conventions, closest class first
+        for (Class<?> c = type; c != null && c != Object.class; c = c.getSuperclass()) {
+            for (String fName : new String[]{"id", "uuid", "uid"}) {
+                try {
+                    return c.getDeclaredField(fName);
+                } catch (NoSuchFieldException ignored) {
+                    // try the next name / superclass
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Materialises a row read by {@link Query} so that query results go through the
+     * same decryption, migration and @Id synchronisation path as {@link #extract(String)}.
+     */
+    T materialize(String id, String json, int dbVersion, Long expiresAt) {
+        return applyMigrations(id, json, dbVersion, expiresAt);
     }
 
     /**

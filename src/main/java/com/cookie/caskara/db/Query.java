@@ -88,6 +88,38 @@ public class Query<T> {
     }
 
     /**
+     * Filters where field differs from value.
+     * <p>
+     * Records that don't have the field at all do <b>not</b> match. The explicit
+     * NOT NULL guard is what keeps this consistent with the in-memory path used by
+     * encrypted cores, where {@code match()} rejects a missing field outright — without
+     * it, {@code json_extract} returns NULL and {@code NULL IS NOT 10} is true, so the
+     * same filter would return different rows depending on whether the entity was encrypted.
+     */
+    public Query<T> fieldNotEquals(String fieldName, Object value) {
+        conditions.add(new Condition(fieldName, "!=", value));
+        return addSqlFilter(
+                "json_extract(json, '$.' || ?) IS NOT NULL AND json_extract(json, '$.' || ?) IS NOT ?",
+                fieldName, fieldName, value);
+    }
+
+    /**
+     * Filters where field is greater than or equal to value.
+     */
+    public Query<T> fieldGreaterOrEqual(String fieldName, Object value) {
+        conditions.add(new Condition(fieldName, ">=", value));
+        return addSqlFilter("json_extract(json, '$.' || ?) >= ?", fieldName, value);
+    }
+
+    /**
+     * Filters where field is less than or equal to value.
+     */
+    public Query<T> fieldLessOrEqual(String fieldName, Object value) {
+        conditions.add(new Condition(fieldName, "<=", value));
+        return addSqlFilter("json_extract(json, '$.' || ?) <= ?", fieldName, value);
+    }
+
+    /**
      * Filters where field matches one of the values in the list.
      */
     public Query<T> fieldIn(String fieldName, List<Object> values) {
@@ -134,9 +166,13 @@ public class Query<T> {
         return this;
     }
 
+    /**
+     * 1-based pagination. Pages below 1 are clamped to the first page instead of
+     * producing a negative OFFSET (which SQLite rejects).
+     */
     public Query<T> page(int page, int size) {
         this.limit = size;
-        this.offset = (page - 1) * size;
+        this.offset = Math.max(0, (page - 1) * size);
         return this;
     }
 
@@ -160,7 +196,7 @@ public class Query<T> {
             return shell.runInLock(() -> {
                 List<T> results = new ArrayList<>();
                 StringBuilder sql = new StringBuilder(
-                    "SELECT json FROM elements WHERE type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)");
+                    "SELECT id, json, version, expires_at FROM elements WHERE type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)");
 
                 if (sqlFilter.length() > 0) {
                     sql.append(" AND ").append(sqlFilter);
@@ -189,7 +225,17 @@ public class Query<T> {
 
                     try (ResultSet rs = pstmt.executeQuery()) {
                         while (rs.next()) {
-                            results.add(Core.getGson().fromJson(rs.getString("json"), clazz));
+                            // Go through Core so results get the same @Id sync and
+                            // schema-migration treatment as extract()/extractAll().
+                            String rowId = rs.getString("id");
+                            String rowJson = rs.getString("json");
+                            int rowVersion = rs.getInt("version");
+                            long exp = rs.getLong("expires_at");
+                            Long expiresAt = rs.wasNull() ? null : exp;
+                            T obj = core.materialize(rowId, rowJson, rowVersion, expiresAt);
+                            if (obj != null) {
+                                results.add(obj);
+                            }
                         }
                     }
                 } catch (SQLException e) {
@@ -251,19 +297,41 @@ public class Query<T> {
         Object target = cond.value;
         switch (cond.operator) {
             case "=":
-                return actual.equals(target);
+                return equalsValue(actual, target);
+            case "!=":
+                return !equalsValue(actual, target);
             case ">":
                 return compare(actual, target) > 0;
             case "<":
                 return compare(actual, target) < 0;
+            case ">=":
+                return compare(actual, target) >= 0;
+            case "<=":
+                return compare(actual, target) <= 0;
             case "CONTAINS":
                 return actual.toString().toLowerCase().contains(target.toString().toLowerCase());
             case "IN":
                 List<Object> values = (List<Object>) target;
-                return values.stream().anyMatch(v -> actual.equals(v));
+                return values.stream().anyMatch(v -> equalsValue(actual, v));
             default:
                 return false;
         }
+    }
+
+    /**
+     * Equality that tolerates numeric widening. getFieldValue() always returns numbers as
+     * Double, so Double(5.0).equals(Integer(5)) was false and field("level", 5) never
+     * matched on encrypted cores.
+     */
+    @SuppressWarnings("rawtypes")
+    private boolean equalsValue(Comparable actual, Object target) {
+        if (target == null) return false;
+        if (actual instanceof Number && target instanceof Number) {
+            return ((Number) actual).doubleValue() == ((Number) target).doubleValue();
+        }
+        if (actual.equals(target)) return true;
+        // Fall back to string comparison (e.g. enum/char values serialised as text).
+        return actual.toString().equals(target.toString());
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -282,7 +350,14 @@ public class Query<T> {
         try {
             // Convert to JsonObject to easily extract any field
             JsonObject json = Core.getGson().toJsonTree(item).getAsJsonObject();
-            JsonElement element = json.get(fieldName);
+
+            // Support dotted paths ("location.x") for parity with the SQL path,
+            // which uses json_extract(json, '$.' || fieldName).
+            JsonElement element = json;
+            for (String part : fieldName.split("\\.")) {
+                if (element == null || !element.isJsonObject()) return null;
+                element = element.getAsJsonObject().get(part);
+            }
             if (element == null || element.isJsonNull()) return null;
             
             if (element.isJsonPrimitive()) {
@@ -295,6 +370,117 @@ public class Query<T> {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * Counts matching records without deserialising them.
+     * <p>
+     * Encrypted cores fall back to filtering in memory, where counting still requires
+     * decrypting every record. LIMIT/OFFSET are deliberately ignored — this counts the
+     * full result set, which is what you want for pagination ("how many pages?").
+     */
+    public long count() {
+        if (core.isEncrypted()) {
+            return fetchAllMatching().size();
+        }
+
+        long startTime = System.nanoTime();
+        try {
+            return shell.runInLock(() -> {
+                StringBuilder sql = new StringBuilder(
+                    "SELECT COUNT(*) FROM elements WHERE type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)");
+                if (sqlFilter.length() > 0) {
+                    sql.append(" AND ").append(sqlFilter);
+                }
+
+                try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql.toString())) {
+                    int paramIndex = 1;
+                    pstmt.setString(paramIndex++, typeName);
+                    pstmt.setLong(paramIndex++, System.currentTimeMillis());
+                    for (Object param : sqlParams) {
+                        pstmt.setObject(paramIndex++, param);
+                    }
+                    try (ResultSet rs = pstmt.executeQuery()) {
+                        return rs.next() ? rs.getLong(1) : 0L;
+                    }
+                } catch (SQLException e) {
+                    throw new DatabaseException("Failed to count query results", e);
+                }
+            });
+        } finally {
+            shell.getStats().recordQuery(System.nanoTime() - startTime);
+        }
+    }
+
+    /**
+     * True when at least one record matches. Cheaper than {@code !fetch().isEmpty()}.
+     */
+    public boolean exists() {
+        if (core.isEncrypted()) {
+            return !fetchAllMatching().isEmpty();
+        }
+        Integer previousLimit = this.limit;
+        try {
+            this.limit = 1;
+            return !fetch().isEmpty();
+        } finally {
+            this.limit = previousLimit;
+        }
+    }
+
+    /**
+     * Deletes every record matching this query and returns how many were removed.
+     * <p>
+     * Runs as a single SQL statement, then invalidates the shell's caches since the
+     * affected ids are not known up front.
+     */
+    public int delete() {
+        if (core.isEncrypted()) {
+            // Filters cannot be pushed into SQL, so resolve ids in memory first.
+            List<T> matches = fetchAllMatching();
+            int removed = 0;
+            for (T item : matches) {
+                String id = com.cookie.caskara.Caskara.getId(item);
+                if (id != null) {
+                    core.discard(id);
+                    removed++;
+                }
+            }
+            return removed;
+        }
+
+        return shell.runInLock(() -> {
+            StringBuilder sql = new StringBuilder(
+                "DELETE FROM elements WHERE type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)");
+            if (sqlFilter.length() > 0) {
+                sql.append(" AND ").append(sqlFilter);
+            }
+
+            try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql.toString())) {
+                int paramIndex = 1;
+                pstmt.setString(paramIndex++, typeName);
+                pstmt.setLong(paramIndex++, System.currentTimeMillis());
+                for (Object param : sqlParams) {
+                    pstmt.setObject(paramIndex++, param);
+                }
+                int removed = pstmt.executeUpdate();
+                if (removed > 0) {
+                    shell.invalidateCaches();
+                }
+                return removed;
+            } catch (SQLException e) {
+                throw new DatabaseException("Failed to delete query results", e);
+            }
+        });
+    }
+
+    /** In-memory filtering without pagination, shared by count/exists/delete on encrypted cores. */
+    private List<T> fetchAllMatching() {
+        Stream<T> stream = core.extractAll().stream();
+        for (Condition cond : conditions) {
+            stream = stream.filter(item -> match(item, cond));
+        }
+        return stream.collect(Collectors.toList());
     }
 
     public CompletableFuture<List<T>> fetchAsync() {

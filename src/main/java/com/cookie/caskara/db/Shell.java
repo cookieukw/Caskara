@@ -1,6 +1,7 @@
 package com.cookie.caskara.db;
 
 import com.cookie.caskara.exceptions.DatabaseException;
+import com.cookie.caskara.utils.CaskaraLogger;
 import com.google.gson.Gson;
 import java.io.File;
 import java.sql.Connection;
@@ -10,12 +11,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -31,17 +34,30 @@ import java.nio.file.Files;
  */
 public class Shell {
     private static final Gson GSON = new Gson();
+    /** serializeNulls so an absent TTL round-trips as an explicit null instead of vanishing. */
+    private static final Gson EXPORT_GSON = new com.google.gson.GsonBuilder().serializeNulls().create();
     private final File shellFile;
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final ReentrantLock lock = new ReentrantLock();
-    private Connection connection;
+    private volatile Connection connection;
     private final Map<Class<?>, Core<?>> cores = new ConcurrentHashMap<>();
+    private final Object coreCreationLock = new Object();
     private final Stats stats = new Stats();
     private ScheduledExecutorService cleanupScheduler;
+
+    /** Nesting depth of {@link #transaction(Consumer)} on the thread currently holding the lock. */
+    private int transactionDepth = 0;
+    
+    private final BlockingQueue<Runnable> asyncWriteQueue = new LinkedBlockingQueue<>();
+    private Thread asyncWriterThread;
 
     public Shell(File shellFile) {
         this.shellFile = shellFile;
         initConnection();
+    }
+
+    public File getShellFile() {
+        return shellFile;
     }
 
     public Stats getStats() {
@@ -64,29 +80,198 @@ public class Shell {
             try (Statement stmt = connection.createStatement()) {
                 stmt.execute("PRAGMA journal_mode = WAL");
                 stmt.execute("PRAGMA synchronous = NORMAL");
+                // Required so that "INSERT OR REPLACE" fires the AFTER DELETE triggers that
+                // keep the FTS5 index in sync. Without it the index accumulates stale rows.
+                stmt.execute("PRAGMA recursive_triggers = ON");
                 
+                // Fresh databases get the composite key straight away. Existing ones are
+                // upgraded by upgradeToCompositeKey() below.
                 stmt.execute("CREATE TABLE IF NOT EXISTS elements (" +
-                        "id TEXT PRIMARY KEY," +
-                        "type TEXT," +
+                        "id TEXT NOT NULL," +
+                        "type TEXT NOT NULL," +
                         "json TEXT," +
                         "expires_at INTEGER," +
                         "deleted_at INTEGER," +
-                        "version INTEGER DEFAULT 1" + // Schema migration support
+                        "version INTEGER DEFAULT 1," + // Schema migration support
+                        "PRIMARY KEY (id, type)" +
                         ")");
                 stmt.execute("CREATE INDEX IF NOT EXISTS idx_type ON elements(type)");
-                
-                // Migrations for existing databases
+
+            // Migrations for existing databases
                 try { stmt.execute("ALTER TABLE elements ADD COLUMN expires_at INTEGER"); } catch (SQLException ignored) {}
                 try { stmt.execute("ALTER TABLE elements ADD COLUMN deleted_at INTEGER"); } catch (SQLException ignored) {}
                 try { stmt.execute("ALTER TABLE elements ADD COLUMN version INTEGER DEFAULT 1"); } catch (SQLException ignored) {}
             }
+
+            upgradeToCompositeKey();
             
+            if (asyncWriterThread == null) {
+                asyncWriterThread = new Thread(() -> {
+                    while (!Thread.currentThread().isInterrupted()) {
+                        try {
+                            Runnable firstTask = asyncWriteQueue.take();
+                            transaction(tx -> {
+                                firstTask.run();
+                                Runnable nextTask;
+                                while ((nextTask = asyncWriteQueue.poll()) != null) {
+                                    nextTask.run();
+                                }
+                            });
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        } catch (Exception e) {
+                            System.err.println("[Caskara] Async writer thread encountered an error: " + e.getMessage());
+                        }
+                    }
+                }, "Caskara-Writer-" + shellFile.getName());
+                asyncWriterThread.setDaemon(true);
+                asyncWriterThread.start();
+            }
+
             startCleanupTask();
         } catch (Exception e) {
             throw new DatabaseException("Failed to initialize shell connection for: " + shellFile.getName(), e);
         } finally {
             lock.unlock();
         }
+    }
+
+    /**
+     * Caskara's own on-disk schema version, tracked via {@code PRAGMA user_version}.
+     * <p>
+     * 0 = legacy layout, {@code id TEXT PRIMARY KEY}<br>
+     * 1 = {@code PRIMARY KEY (id, type)}
+     */
+    private static final int SCHEMA_VERSION_COMPOSITE_KEY = 1;
+
+    /**
+     * Rebuilds the {@code elements} table with a composite primary key.
+     * <p>
+     * The original schema declared {@code id TEXT PRIMARY KEY} while keeping {@code type}
+     * as an ordinary column. Since every write is an {@code INSERT OR REPLACE}, saving two
+     * different entity types under the same id (a player name or UUID, say) silently
+     * destroyed the first record: the row was replaced, and every read filters on
+     * {@code id AND type}, so the old entity simply disappeared.
+     * <p>
+     * Runs once per database file, inside a transaction, after taking a consistent
+     * snapshot of the file. If anything fails the transaction is rolled back and the
+     * database is left exactly as it was.
+     * <p>
+     * Note: indexes created at runtime through {@link Core#createIndex(String)} live on the
+     * old table and are dropped with it. Indexes declared via {@code @Index} are recreated
+     * automatically the next time the Core is built; purely programmatic ones must be
+     * re-issued by the caller.
+     */
+    private void upgradeToCompositeKey() throws SQLException {
+        Connection conn = connection;
+
+        int userVersion;
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("PRAGMA user_version")) {
+            userVersion = rs.next() ? rs.getInt(1) : 0;
+        }
+        if (userVersion >= SCHEMA_VERSION_COMPOSITE_KEY) {
+            return;
+        }
+
+        // A freshly created file already has the right shape — just stamp the version.
+        if (hasCompositePrimaryKey(conn)) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("PRAGMA user_version = " + SCHEMA_VERSION_COMPOSITE_KEY);
+            }
+            return;
+        }
+
+        CaskaraLogger.warn("Caskara: upgrading '" + shellFile.getName()
+                + "' to a composite primary key (id, type). Taking a snapshot first...");
+
+        File snapshot = new File(shellFile.getParentFile(), shellFile.getName() + ".pre-composite-key.bak");
+        try (Statement stmt = conn.createStatement()) {
+            // VACUUM INTO writes a consistent copy without needing the file to be closed.
+            if (snapshot.exists() && !snapshot.delete()) {
+                throw new DatabaseException("Cannot overwrite stale migration snapshot: " + snapshot.getAbsolutePath());
+            }
+            stmt.execute("VACUUM INTO '" + snapshot.getAbsolutePath().replace("'", "''") + "'");
+        } catch (SQLException e) {
+            throw new DatabaseException("Aborting composite-key upgrade for " + shellFile.getName()
+                    + ": could not create a safety snapshot. The database was not modified.", e);
+        }
+
+        boolean previousAutoCommit = conn.getAutoCommit();
+        conn.setAutoCommit(false);
+        try (Statement stmt = conn.createStatement()) {
+            // The FTS triggers belong to the old table and would be dropped with it; the
+            // shadow index would then hold rows keyed by rowids that no longer exist.
+            // Drop both so Core.initializeFts() rebuilds them cleanly on next use.
+            dropFtsArtifacts(stmt);
+
+            stmt.execute("CREATE TABLE elements_migrated (" +
+                    "id TEXT NOT NULL," +
+                    "type TEXT NOT NULL," +
+                    "json TEXT," +
+                    "expires_at INTEGER," +
+                    "deleted_at INTEGER," +
+                    "version INTEGER DEFAULT 1," +
+                    "PRIMARY KEY (id, type)" +
+                    ")");
+
+            // The old PK guaranteed ids were unique, so no (id, type) pair can collide here.
+            // Rows with a NULL type predate the type column and would violate NOT NULL.
+            stmt.execute("INSERT INTO elements_migrated (id, type, json, expires_at, deleted_at, version) " +
+                    "SELECT id, COALESCE(type, ''), json, expires_at, deleted_at, COALESCE(version, 1) " +
+                    "FROM elements WHERE id IS NOT NULL");
+
+            stmt.execute("DROP TABLE elements");
+            stmt.execute("ALTER TABLE elements_migrated RENAME TO elements");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_type ON elements(type)");
+            stmt.execute("PRAGMA user_version = " + SCHEMA_VERSION_COMPOSITE_KEY);
+
+            conn.commit();
+            CaskaraLogger.info("Caskara: '" + shellFile.getName()
+                    + "' upgraded to composite primary key. Snapshot kept at " + snapshot.getName());
+        } catch (SQLException e) {
+            try {
+                conn.rollback();
+            } catch (SQLException rollbackEx) {
+                CaskaraLogger.error("Rollback of the composite-key upgrade failed", rollbackEx);
+            }
+            throw new DatabaseException("Composite-key upgrade failed for " + shellFile.getName()
+                    + ". The database was rolled back; a snapshot is available at " + snapshot.getAbsolutePath(), e);
+        } finally {
+            conn.setAutoCommit(previousAutoCommit);
+        }
+    }
+
+    /** True when {@code elements} already declares both id and type as primary key columns. */
+    private boolean hasCompositePrimaryKey(Connection conn) throws SQLException {
+        int pkColumns = 0;
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("PRAGMA table_info(elements)")) {
+            while (rs.next()) {
+                if (rs.getInt("pk") > 0) {
+                    pkColumns++;
+                }
+            }
+        }
+        return pkColumns >= 2;
+    }
+
+    /** Removes the FTS5 shadow table and every per-type trigger attached to {@code elements}. */
+    private void dropFtsArtifacts(Statement stmt) throws SQLException {
+        List<String> triggers = new ArrayList<>();
+        try (ResultSet rs = stmt.executeQuery(
+                // '_' is a LIKE wildcard, so it must be escaped to match the literal
+                // trigger names Core.initializeFts() creates (fts_ai_/fts_ad_/fts_au_).
+                "SELECT name FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'fts\\_a%' ESCAPE '\\'")) {
+            while (rs.next()) {
+                triggers.add(rs.getString("name"));
+            }
+        }
+        for (String trigger : triggers) {
+            stmt.execute("DROP TRIGGER IF EXISTS \"" + trigger.replace("\"", "\"\"") + "\"");
+        }
+        stmt.execute("DROP TABLE IF EXISTS fts_elements");
     }
 
     public Connection getConnection() {
@@ -107,6 +292,13 @@ public class Shell {
     }
 
     /**
+     * Enqueues a write operation to be processed by the background batch writer thread.
+     */
+    public void enqueueWrite(Runnable task) {
+        asyncWriteQueue.offer(task);
+    }
+
+    /**
      * Executes an action within the shell's lock to ensure thread safety.
      */
     public <R> R runInLock(Supplier<R> action) {
@@ -119,15 +311,37 @@ public class Shell {
     }
 
     /**
+     * True when the calling thread already owns the shell lock (i.e. it is inside
+     * {@link #runInLock(Supplier)} or {@link #transaction(Consumer)}).
+     * Used to avoid dispatching reads to another thread, which would deadlock.
+     */
+    public boolean isLockHeldByCurrentThread() {
+        return lock.isHeldByCurrentThread();
+    }
+
+    /**
      * Executes a series of operations within a single SQL transaction.
      * Thread-safe and atomic.
      */
     public void transaction(Consumer<Transaction> action) {
         lock.lock();
         try {
+            // Nested transaction: join the outer one instead of committing early.
+            // Committing here would make the outer transaction non-atomic.
+            if (transactionDepth > 0) {
+                transactionDepth++;
+                try {
+                    action.accept(new Transaction(this));
+                } finally {
+                    transactionDepth--;
+                }
+                return;
+            }
+
             Connection conn = getConnection();
             boolean previousAutoCommit = conn.getAutoCommit();
             conn.setAutoCommit(false);
+            transactionDepth = 1;
             try {
                 action.accept(new Transaction(this));
                 conn.commit();
@@ -142,6 +356,7 @@ public class Shell {
                 }
                 throw new DatabaseException("Transaction failed and was rolled back", e);
             } finally {
+                transactionDepth = 0;
                 conn.setAutoCommit(previousAutoCommit);
             }
         } catch (SQLException e) {
@@ -149,6 +364,14 @@ public class Shell {
         } finally {
             lock.unlock();
         }
+    }
+
+    /**
+     * Public entry point to drop every Core's in-memory cache for this shell.
+     * Required after out-of-band writes (e.g. the admin UI deleting rows directly).
+     */
+    public void invalidateCaches() {
+        clearAllCaches();
     }
 
     /**
@@ -174,7 +397,23 @@ public class Shell {
      */
     @SuppressWarnings("unchecked")
     public <T> Core<T> core(Class<T> clazz) {
-        return (Core<T>) cores.computeIfAbsent(clazz, c -> new Core<>(this, (Class<T>) c));
+        // NOTE: deliberately not computeIfAbsent — the Core constructor runs DDL,
+        // opens connections and may re-enter shell.core(), which would either
+        // deadlock a ConcurrentHashMap bin or throw IllegalStateException
+        // ("recursive update").
+        Core<T> existing = (Core<T>) cores.get(clazz);
+        if (existing != null) {
+            return existing;
+        }
+        synchronized (coreCreationLock) {
+            existing = (Core<T>) cores.get(clazz);
+            if (existing != null) {
+                return existing;
+            }
+            Core<T> created = new Core<>(this, clazz);
+            cores.put(clazz, created);
+            return created;
+        }
     }
 
     /**
@@ -183,18 +422,31 @@ public class Shell {
     public void exportToJson(File file) {
         runInLock(() -> {
             try {
-                List<Map<String, String>> data = new ArrayList<>();
+                List<Map<String, Object>> data = new ArrayList<>();
+                // Previously only id/type/json were exported, so a round-trip silently
+                // dropped every TTL, resurrected soft-deleted records and reset the
+                // schema version. All six columns are carried now.
                 try (Statement stmt = getConnection().createStatement();
-                     ResultSet rs = stmt.executeQuery("SELECT * FROM elements")) {
+                     ResultSet rs = stmt.executeQuery(
+                             "SELECT id, type, json, expires_at, deleted_at, version FROM elements")) {
                     while (rs.next()) {
-                        Map<String, String> row = new HashMap<>();
+                        Map<String, Object> row = new LinkedHashMap<>();
                         row.put("id", rs.getString("id"));
                         row.put("type", rs.getString("type"));
                         row.put("json", rs.getString("json"));
+
+                        long expiresAt = rs.getLong("expires_at");
+                        row.put("expires_at", rs.wasNull() ? null : expiresAt);
+                        long deletedAt = rs.getLong("deleted_at");
+                        row.put("deleted_at", rs.wasNull() ? null : deletedAt);
+                        int version = rs.getInt("version");
+                        row.put("version", rs.wasNull() ? 1 : version);
+
                         data.add(row);
                     }
                 }
-                String fullJson = GSON.toJson(data);
+                // serializeNulls so absent TTLs survive as explicit nulls
+                String fullJson = EXPORT_GSON.toJson(data);
                 Files.writeString(file.toPath(), fullJson);
             } catch (Exception e) {
                 throw new DatabaseException("Failed to export shell to JSON", e);
@@ -206,24 +458,46 @@ public class Shell {
     /**
      * Imports data from a JSON file into this shell.
      */
-    @SuppressWarnings("unchecked")
     public void importFromJson(File file) {
         runInLock(() -> {
             try {
                 String content = Files.readString(file.toPath());
-                List<Map<String, String>> data = GSON.fromJson(content, List.class);
+                // Typed token instead of the old raw List.class: Gson hands back
+                // Map<String,Object> (numbers as Double), so the previous unchecked cast
+                // to Map<String,String> blew up as soon as a numeric column was present.
+                java.lang.reflect.Type rowType =
+                        new com.google.gson.reflect.TypeToken<List<Map<String, Object>>>() {}.getType();
+                List<Map<String, Object>> data = GSON.fromJson(content, rowType);
+                if (data == null) {
+                    return null;
+                }
 
-                // Insert with version=1 so that migrations can be applied on next read
-                String sql = "INSERT OR REPLACE INTO elements (id, type, json, version) VALUES (?, ?, ?, 1)";
+                String sql = "INSERT OR REPLACE INTO elements " +
+                        "(id, type, json, expires_at, deleted_at, version) VALUES (?, ?, ?, ?, ?, ?)";
                 try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
-                    for (Map<String, String> row : data) {
-                        pstmt.setString(1, row.get("id"));
-                        pstmt.setString(2, row.get("type"));
-                        pstmt.setString(3, row.get("json"));
+                    for (Map<String, Object> row : data) {
+                        if (row == null) continue;
+                        Object id = row.get("id");
+                        if (id == null) continue; // id and type are NOT NULL in the schema
+
+                        pstmt.setString(1, id.toString());
+                        Object type = row.get("type");
+                        pstmt.setString(2, type == null ? "" : type.toString());
+                        Object json = row.get("json");
+                        pstmt.setString(3, json == null ? null : json.toString());
+
+                        setNullableLong(pstmt, 4, row.get("expires_at"));
+                        setNullableLong(pstmt, 5, row.get("deleted_at"));
+
+                        Object version = row.get("version");
+                        pstmt.setInt(6, version instanceof Number ? ((Number) version).intValue() : 1);
+
                         pstmt.addBatch();
                     }
                     pstmt.executeBatch();
                 }
+                // Imported rows bypass the Cores entirely, so any cached object is stale.
+                clearAllCaches();
             } catch (Exception e) {
                 throw new DatabaseException("Failed to import shell from JSON", e);
             }
@@ -231,7 +505,21 @@ public class Shell {
         });
     }
 
+    /** Binds an epoch-millis column, tolerating Gson's Double representation and nulls. */
+    private static void setNullableLong(PreparedStatement pstmt, int index, Object value) throws SQLException {
+        if (value instanceof Number) {
+            pstmt.setLong(index, ((Number) value).longValue());
+        } else {
+            pstmt.setNull(index, java.sql.Types.INTEGER);
+        }
+    }
+
     private void startCleanupTask() {
+        // initConnection() may run again after a reconnect; without this guard every
+        // reconnect leaked an extra scheduler thread.
+        if (cleanupScheduler != null && !cleanupScheduler.isShutdown()) {
+            return;
+        }
         cleanupScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "caskara-cleanup");
             t.setDaemon(true);
@@ -255,11 +543,16 @@ public class Shell {
      * Closes the shell and its connections.
      */
     public void close() {
+        if (cleanupScheduler != null) {
+            cleanupScheduler.shutdownNow();
+        }
+        if (asyncWriterThread != null) {
+            asyncWriterThread.interrupt();
+            asyncWriterThread = null;
+        }
+        executor.shutdown();
+        clearAllCaches();
         try {
-            if (cleanupScheduler != null) {
-                cleanupScheduler.shutdownNow();
-            }
-            executor.shutdown();
             if (connection != null && !connection.isClosed()) {
                 connection.close();
             }
