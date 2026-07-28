@@ -78,21 +78,36 @@ então o dado simplesmente some.
 Isso atinge qualquer mod que use IDs naturais (nome/UUID do jogador) em mais de uma entidade
 dentro do mesmo shell — o caso de uso mais comum que existe.
 
-**Não corrigi**: exige rebuild da tabela e migração dos dados existentes. Correção proposta:
+**Corrigido** em `Shell.upgradeToCompositeKey()`. Bancos novos já nascem com
+`PRIMARY KEY (id, type)`; bancos existentes são convertidos uma única vez na abertura:
 
-```sql
-CREATE TABLE elements_new (
-  id TEXT NOT NULL, type TEXT NOT NULL, json TEXT,
-  expires_at INTEGER, deleted_at INTEGER, version INTEGER DEFAULT 1,
-  PRIMARY KEY (id, type)
-);
-INSERT INTO elements_new SELECT id, type, json, expires_at, deleted_at, version FROM elements;
-DROP TABLE elements;  ALTER TABLE elements_new RENAME TO elements;
-```
+1. lê `PRAGMA user_version` — se já for `1`, retorna na hora (idempotente);
+2. se a tabela já tem PK composta (arquivo recém-criado), só carimba a versão;
+3. tira um snapshot consistente com `VACUUM INTO` → `<shell>.db.pre-composite-key.bak`.
+   Se o snapshot falhar, **aborta sem tocar no banco**;
+4. dentro de uma transação: derruba os triggers FTS e a `fts_elements` (ficariam órfãos com
+   rowids inválidos — o `Core.initializeFts()` reconstrói limpo depois), cria `elements_migrated`,
+   copia, `DROP` + `RENAME`, recria `idx_type`, marca `user_version = 1`;
+5. qualquer erro → `rollback` e o snapshot continua no disco.
 
-Precisa rodar dentro de uma transação, com backup automático antes e um marcador de versão de
-schema no próprio arquivo (ex.: `PRAGMA user_version`) para não reexecutar. Posso implementar se
-você quiser.
+A cópia é segura porque a PK antiga já garantia ids únicos — nenhum par `(id, type)` pode colidir.
+`COALESCE(type, '')` cobre linhas anteriores à coluna `type`.
+
+**Validado** contra o banco legado real do repositório (`test_admin_logic_db/global/default.db`,
+18 registros): schema convertido, `user_version = 1`, as 18 linhas idênticas byte a byte antes e
+depois, segunda execução não remigra, `type` nulo passa a ser rejeitado, e o cenário do bug
+(`steve/player` + `steve/inventory`) agora coexiste em vez de se destruir.
+
+**Consequências que ajustei junto:**
+
+- `CaskaraAdminLogic.deleteEntity(shell, id)` virou `deleteEntity(shell, id, type)` — deletar só
+  por id agora apagaria todos os tipos daquele id. A UI já tinha o tipo em mãos.
+- `dumpEntity` agora itera todas as linhas do id (antes lia só a primeira).
+- `importFromJson` normaliza `type` nulo para `""` e pula linhas sem id (as colunas viraram NOT NULL).
+
+**Ponto de atenção:** índices criados em runtime por `Caskara.createIndex()` vivem na tabela antiga
+e caem junto no `DROP`. Os declarados via `@Index` são recriados sozinhos no próximo boot; os
+programáticos precisam ser reemitidos. Está documentado no javadoc do método.
 
 ### 5. ⚠️ `autoMigrateLegacyData()` altera um `default.db` que pode estar aberto
 
@@ -402,7 +417,7 @@ caminhos de falha em que o logger nem existe. **Corrigido:** resolução única 
 | Arquivo | Itens |
 |---|---|
 | `db/Core.java` | 2, 3, 6, 15, 16, 19 (`count()`), 9 (`materialize()`) |
-| `db/Shell.java` | 7, 8, 11, 12, 13, 14 |
+| `db/Shell.java` | 4 (`upgradeToCompositeKey()`), 7, 8, 11, 12, 13, 14 |
 | `db/Query.java` | 9, 10, 24, 25 |
 | `Caskara.java` | 1, 19, 20, 21 |
 | `commands/CaskaraAdminLogic.java` | 14, 23 |
