@@ -215,24 +215,25 @@ public class CaskaraAdminLogic {
         for (Shell shell : Caskara.getShells().values()) {
             try {
                 Connection conn = shell.getConnection();
-                try (PreparedStatement pstmt = conn.prepareStatement("SELECT type, json FROM elements WHERE id = ?")) {
+                // One id can now map to several rows (one per entity type), so dump them all.
+                try (PreparedStatement pstmt = conn.prepareStatement(
+                        "SELECT type, json FROM elements WHERE id = ? ORDER BY type")) {
                     pstmt.setString(1, id);
                     try (ResultSet rs = pstmt.executeQuery()) {
-                        if (rs.next()) {
+                        while (rs.next()) {
                             String type = rs.getString("type");
                             String json = rs.getString("json");
 
-                            System.out.println("[CaskaraDump] === DUMP FOR ID: " + id + " ===");
-                            System.out.println("[CaskaraDump] Type: " + type);
+                            System.out.println("[CaskaraDump] === DUMP FOR ID: " + id + " (type: " + type + ") ===");
                             System.out.println("[CaskaraDump] JSON: " + json);
                             System.out.println("[CaskaraDump] ===========================");
 
-                            output.add("Dumped entity " + id + " to Server Console!");
+                            output.add("Dumped entity " + id + " (" + type + ") to Server Console!");
                             found = true;
-                            break;
                         }
                     }
                 }
+                if (found) break;
             } catch (Exception e) {
                 output.add("[Error] Error during dump search: " + e.getMessage());
             }
