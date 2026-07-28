@@ -357,7 +357,16 @@ public class Caskara {
      */
     public static <T> void rotateKey(Class<T> clazz, String oldKey, String newKey) {
         encrypt(clazz, oldKey);
+        long expected = core(clazz).count();
         List<T> allData = list(clazz);
+        if (allData.size() != expected) {
+            // Records that fail to decrypt are dropped by extractAll(). Re-keying now
+            // would leave them permanently unreadable, so abort while oldKey still works.
+            encrypt(clazz, oldKey);
+            throw new com.cookie.caskara.exceptions.DatabaseException(
+                "Aborting key rotation for " + clazz.getSimpleName() + ": only " + allData.size()
+                + " of " + expected + " records could be decrypted with the old key. No data was changed.");
+        }
         encrypt(clazz, newKey);
         for (T data : allData) {
             String id = getId(data);
