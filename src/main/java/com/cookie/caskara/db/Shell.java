@@ -454,8 +454,10 @@ public class Shell {
                 String sql = "INSERT OR REPLACE INTO elements (id, type, json, version) VALUES (?, ?, ?, 1)";
                 try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
                     for (Map<String, String> row : data) {
-                        pstmt.setString(1, row.get("id"));
-                        pstmt.setString(2, row.get("type"));
+                        String id = row.get("id");
+                        if (id == null) continue; // id and type are NOT NULL in the schema
+                        pstmt.setString(1, id);
+                        pstmt.setString(2, row.get("type") == null ? "" : row.get("type"));
                         pstmt.setString(3, row.get("json"));
                         pstmt.addBatch();
                     }
