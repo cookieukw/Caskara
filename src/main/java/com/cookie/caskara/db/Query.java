@@ -160,7 +160,7 @@ public class Query<T> {
             return shell.runInLock(() -> {
                 List<T> results = new ArrayList<>();
                 StringBuilder sql = new StringBuilder(
-                    "SELECT json FROM elements WHERE type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)");
+                    "SELECT id, json, version, expires_at FROM elements WHERE type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)");
 
                 if (sqlFilter.length() > 0) {
                     sql.append(" AND ").append(sqlFilter);
