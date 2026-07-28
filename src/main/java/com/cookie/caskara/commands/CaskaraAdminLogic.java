@@ -79,23 +79,20 @@ public class CaskaraAdminLogic {
     public static List<EntityData> getShellEntities(String shellName, int offset, int limit) {
         List<EntityData> list = new ArrayList<>();
         Shell targetShell = null;
-        System.out.println("[CaskaraAdmin] Requested shell: " + shellName);
         for (Shell s : Caskara.getShells().values()) {
-            if (s.getFile() != null) {
-                System.out.println("[CaskaraAdmin] Checking shell file: " + s.getFile().getName());
-                if (s.getFile().getName().equals(shellName)) {
-                    targetShell = s;
-                    break;
-                }
+            if (s.getFile() != null && s.getFile().getName().equals(shellName)) {
+                targetShell = s;
+                break;
             }
         }
         if (targetShell == null) {
-            System.out.println("[CaskaraAdmin] targetShell is NULL for " + shellName);
             return list;
         }
 
         try {
-            String sql = "SELECT id, type, length(json) as sizeBytes, expires_at FROM elements LIMIT ? OFFSET ?";
+            // ORDER BY is required: LIMIT/OFFSET without it gives SQLite freedom to
+            // return rows in any order, so pages could repeat or skip entries.
+            String sql = "SELECT id, type, length(json) as sizeBytes, expires_at FROM elements ORDER BY type, id LIMIT ? OFFSET ?";
             try (PreparedStatement pstmt = targetShell.getConnection().prepareStatement(sql)) {
                 pstmt.setInt(1, limit);
                 pstmt.setInt(2, offset);
@@ -123,10 +120,8 @@ public class CaskaraAdminLogic {
                 }
             }
         } catch (Exception e) {
-            System.err.println("[CaskaraAdmin] SQL Error in getShellEntities:");
-            e.printStackTrace();
+            CaskaraLogger.error("SQL error in getShellEntities for shell " + shellName, e);
         }
-        System.out.println("[CaskaraAdmin] Returning " + list.size() + " entities.");
         return list;
     }
 
