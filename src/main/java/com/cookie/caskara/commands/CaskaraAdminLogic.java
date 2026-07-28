@@ -160,10 +160,16 @@ public class CaskaraAdminLogic {
 
         for (Shell shell : Caskara.getShells().values()) {
             try {
-                Connection conn = shell.getConnection();
-                try (Statement stmt = conn.createStatement()) {
-                    stmt.execute("VACUUM");
-                }
+                // Under the shell lock: VACUUM rewrites the whole file and must not
+                // race with concurrent writers.
+                shell.runInLock(() -> {
+                    try (Statement stmt = shell.getConnection().createStatement()) {
+                        stmt.execute("VACUUM");
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                    return null;
+                });
                 count++;
             } catch (Exception e) {
                 output.add("[Error] Failed to vacuum a shell: " + e.getMessage());
