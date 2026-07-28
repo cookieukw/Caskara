@@ -79,15 +79,9 @@ public class Caskara {
      * Enables or changes the Auto-Vacuum interval in hours.
      * If 0 or negative, cancels the current Auto-Vacuum task.
      */
-    public static void enableAutoVacuum(long periodHours) {
-        if (scheduler == null) {
-            scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread t = new Thread(r, "Caskara-AutoVacuum");
-                t.setDaemon(true);
-                return t;
-            });
-        }
-        
+    public static synchronized void enableAutoVacuum(long periodHours) {
+        ensureScheduler();
+
         if (autoVacuumTask != null && !autoVacuumTask.isCancelled()) {
             autoVacuumTask.cancel(false);
         }
@@ -105,15 +99,9 @@ public class Caskara {
      * Enables or changes the Auto-Backup interval in hours.
      * If 0 or negative, cancels the current Auto-Backup task.
      */
-    public static void enableAutoBackup(long periodHours) {
-        if (scheduler == null) {
-            scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread t = new Thread(r, "Caskara-Scheduler");
-                t.setDaemon(true);
-                return t;
-            });
-        }
-        
+    public static synchronized void enableAutoBackup(long periodHours) {
+        ensureScheduler();
+
         if (autoBackupTask != null && !autoBackupTask.isCancelled()) {
             autoBackupTask.cancel(false);
         }
@@ -131,11 +119,23 @@ public class Caskara {
      * Safely terminates all Caskara background tasks.
      * Ideal to be called during the Hytale server shutdown process.
      */
-    public static void shutdown() {
+    private static void ensureScheduler() {
+        if (scheduler == null || scheduler.isShutdown()) {
+            scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "Caskara-Scheduler");
+                t.setDaemon(true);
+                return t;
+            });
+        }
+    }
+
+    public static synchronized void shutdown() {
         if (scheduler != null) {
             scheduler.shutdownNow();
             scheduler = null;
         }
+        autoVacuumTask = null;
+        autoBackupTask = null;
         for (Shell shell : shells.values()) {
             try {
                 shell.close();
@@ -177,7 +177,8 @@ public class Caskara {
      * Opens a Shell dedicated to a specific world.
      */
     public static Shell shell(World world, String name) {
-        return shells.computeIfAbsent("world:" + world.getName() + ":" + name, 
+        requireInitialized();
+        return shells.computeIfAbsent("world:" + world.getName() + ":" + name,
             n -> new Shell(new File(dataFolder, "worlds/" + world.getName() + "/" + name + ".db")));
     }
 
