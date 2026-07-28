@@ -355,49 +355,78 @@ caminhos de falha em que o logger nem existe. **Corrigido:** resolução única 
 
 ---
 
-## 🟢 Melhorias sugeridas (não aplicadas)
+## 🟢 Melhorias — todas aplicadas
 
 **API**
 
-- `discard()` e `softDelete()` não disparam observers — só `preserve()` dispara. Quem usa
-  `observeAll()` para sincronizar estado nunca sabe de deleções. Existe `onBeforeDelete` mas não
-  `onAfterDelete`.
-- `observe(id, ...)` acumula listeners num `ConcurrentHashMap` que nunca é limpo, e não há
-  `unobserve`. Vazamento de memória em servidor de longa duração (um listener por jogador que entra).
-- `syncId()` e `Caskara.getId()` usam `getDeclaredFields()` — **ignoram campos herdados**. Uma
-  entidade que estende uma base com o `@Id` não funciona.
-- `Query` não tem `count()`, `exists()`, `delete()`, `fieldNotEquals()` nem `fieldGreaterOrEqual()`.
-  `Core.count()` foi adicionado; o equivalente no builder ainda falta.
-- `Shell.getFile()` e `Shell.getShellFile()` são idênticos — vale depreciar um.
-- `Pearl.sync()` tem timeout fixo de 5s não configurável. Numa VACUUM ou backup demorado, leituras
-  legítimas passam a lançar exceção.
-- `Caskara.stats()` só devolve o shell padrão, apesar de `CaskaraAdminLogic` já saber agregar todos.
+- ✅ **Observers cegos para deleção.** Só `preserve()` emitia eventos; quem usava `observeAll()`
+  para espelhar estado nunca sabia de remoções. `discard()` e `softDelete()` agora disparam
+  observers com valor `null` (= removido) através de um `notifyObservers()` compartilhado, e existe
+  o hook `onAfterDelete()` que faltava ao lado de `onBeforeDelete()`.
+- ✅ **`observe(id, ...)` vazava memória.** O mapa de listeners só crescia e não havia como
+  cancelar a inscrição. Adicionei `unobserve(id, observer)`, `unobserveAll(id)`,
+  `unobserveAll(observer)` e `getObservedIdCount()` para diagnosticar vazamento. O `unobserve`
+  remove a lista vazia com `remove(key, value)`, para não descartar uma lista que outra thread
+  acabou de popular.
+- ✅ **`@Id` herdado não funcionava.** `syncId()` e `Caskara.getId()` usavam `getDeclaredFields()`
+  na classe concreta, então uma entidade que herdava o `@Id` (ou o campo `id`) de uma classe base
+  nunca era reconhecida — o id não era injetado e `save(obj)` gerava um UUID novo a cada chamada.
+  Agora ambos usam o mesmo `Core.findIdField()`, que sobe a hierarquia.
+
+  > **Mudança de comportamento intencional:** os dois métodos já discordavam entre si. Quando o
+  > campo `@Id` existia mas estava nulo, o `getId()` antigo caía no fallback por nome (`id`/`uuid`/
+  > `uid`), enquanto o `syncId()` antigo parava no `@Id` e nem tentava o fallback. Agora o `@Id`
+  > sempre vence, nos dois. Só afeta entidades que tenham `@Id` num campo **e** outro campo chamado
+  > `id` — caso em que o comportamento anterior era ambíguo de qualquer forma.
+- ✅ **`Query` ganhou** `count()`, `exists()`, `delete()`, `fieldNotEquals()`,
+  `fieldGreaterOrEqual()` e `fieldLessOrEqual()`, com suporte nos dois caminhos (SQL e memória).
+- ✅ **`Pearl.sync()` com timeout fixo de 5s.** Uma leitura legítima atrás de um VACUUM ou backup
+  falhava. Agora há `sync(timeout, unit)` e `Pearl.setDefaultTimeout(...)`. O `InterruptedException`
+  também voltou a restaurar a flag da thread.
+- ✅ **`Caskara.globalStats()`** agrega todos os shells (via novo `Stats.merge()`); `stats()`
+  continua devolvendo só o padrão.
 
 **Dados**
 
-- `exportToJson`/`importFromJson` só carregam `id`, `type` e `json` — **perdem `expires_at`,
-  `deleted_at` e `version`**. Um export/import descarta TTLs e ressuscita soft-deletes. O export
-  também não descriptografa, e o import faz `GSON.fromJson(content, List.class)` com cast não
-  verificado para `Map<String,String>` (o Gson devolve `Map<String,Object>`).
-- Backups nunca são rotacionados. Já existem 11 arquivos `.bak` em `test_admin_logic_db/global/backups/`
-  no repositório. Com auto-backup de 1h por padrão, isso são 24 arquivos/dia por shell, para sempre.
-- `BackupManager` interpola o caminho em `"backup to '" + path + "'"` — quebra com apóstrofo no caminho.
-- `dumpEntity` joga o JSON cru no console do servidor, sem descriptografar e sem redigir nada.
-- `getGlobalStatsMap()` rotula tamanho de arquivo em disco como `"Memory"`, e a UI mostra "MB" de RAM.
+- ✅ **Export/import perdiam dados.** Só `id`, `type` e `json` eram carregados: um round-trip
+  descartava todo TTL, ressuscitava soft-deletes e zerava a versão de schema. Agora as seis colunas
+  viajam. O import trocou o `List.class` cru por um `TypeToken` — o cast não verificado para
+  `Map<String,String>` quebrava assim que uma coluna numérica aparecia, já que o Gson devolve
+  `Map<String,Object>` com números como `Double`. O import também invalida os caches, porque grava
+  direto no SQL sem passar pelos Cores.
+- ✅ **Backups sem rotação.** Com auto-backup horário eram 24 arquivos por shell por dia, para
+  sempre (o repo já tinha 11). `BackupManager` agora retém os 48 mais recentes por shell
+  (configurável no construtor, `0` desliga a poda).
+- ✅ **Caminho do backup sem escape.** `"backup to '" + path + "'"` quebrava com apóstrofo no
+  caminho; agora dobra as aspas como o SQLite espera.
+- ✅ **`"Memory"` era disco.** `getGlobalStatsMap()` rotulava o tamanho dos arquivos `.db` como
+  memória. Passou a expor `"Disk"` (com `"Memory"` mantido como alias para não quebrar bindings), e
+  a UI lê a nova chave.
 
 **Repositório / build**
 
-- Estão versionados: `bin/`, `build/`, `test_admin_logic_db/` (banco de teste + 11 backups),
-  `libs/HytaleServer.jar`, e arquivos soltos na raiz — `test.java`, `BackupTest.java`,
-  `IndexTest.java`, `IndexTestFile.java`. O `.gitignore` cobre `build`, `.gradle`, `/bin`, mas os
-  arquivos já rastreados continuam. Sugiro `git rm -r --cached` neles.
-- `local.properties` está commitado com caminhos da sua máquina (`/home/cookie/...`).
-- `tasks.shadowJar.finalizedBy('deploy')`: **todo build copia o jar para a instalação local do
-  Hytale**. Isso quebra CI e qualquer outro contribuidor. Deve ser opt-in
-  (`if (project.hasProperty('deploy'))`).
-- `entities/User.java`, `entities/FruitBasket.java` e `entities/PlayerStats.java` são entidades de
-  exemplo no sourceset **main** — vão parar no jar publicado. Melhor mover para `src/test` ou para um
-  módulo de exemplos.
+- ✅ `tasks.shadowJar.finalizedBy('deploy')` rodava em **todo** build, copiando o jar para uma
+  instalação local do Hytale — quebra CI e qualquer outra máquina. Virou opt-in via
+  `-Pdeploy` (ou `./gradlew deploy` direto).
+- ✅ `.gitignore` ampliado (`local.properties`, `*.db`, `*.bak`, `test_admin_logic_db/`) e 20
+  arquivos destrackeados com `git rm --cached` — **todos preservados no disco**: o banco de teste e
+  seus 11 backups, o `local.properties` com seus caminhos pessoais, e os arquivos soltos na raiz
+  (`test.java`, `BackupTest.java`, `IndexTest.java`, `IndexTestFile.java`).
+- ℹ️ `libs/` já estava corretamente ignorado pelo próprio `libs/.gitignore` — o jar do servidor
+  nunca esteve versionado.
+- ⏭️ **Não mexi** em `entities/User.java`, `FruitBasket.java` e `PlayerStats.java`. Eu tinha sugerido
+  tirá-las do sourceset `main`, mas verifiquei e elas são referenciadas por `README.md`, `DOCS.md`,
+  `CURSEFORGE.md` e `docs_src/` como exemplos. Movê-las quebraria a documentação — decidi deixar e
+  registrar aqui.
+
+### Divergência encontrada durante a implementação
+
+`fieldNotEquals` em SQL usava `json_extract(...) IS NOT ?`. Como `json_extract` devolve NULL para
+campo ausente e `NULL IS NOT 10` é verdadeiro, registros **sem o campo** casavam — enquanto o
+caminho em memória (cores `@Encrypted`) os rejeita. O mesmo filtro daria resultados diferentes
+conforme a entidade fosse criptografada ou não, exatamente a classe de bug dos itens #10 e #25.
+Adicionei uma guarda `IS NOT NULL` explícita e confirmei contra o SQLite que os dois caminhos
+agora concordam.
 
 **Testes** — lacunas que deixariam os bugs #1, #2, #6, #9 e #10 passarem de novo:
 
@@ -416,12 +445,16 @@ caminhos de falha em que o logger nem existe. **Corrigido:** resolução única 
 
 | Arquivo | Itens |
 |---|---|
-| `db/Core.java` | 2, 3, 6, 15, 16, 19 (`count()`), 9 (`materialize()`) |
-| `db/Shell.java` | 4 (`upgradeToCompositeKey()`), 7, 8, 11, 12, 13, 14 |
-| `db/Query.java` | 9, 10, 24, 25 |
-| `Caskara.java` | 1, 19, 20, 21 |
-| `commands/CaskaraAdminLogic.java` | 14, 23 |
-| `ui/CaskaraAdminPage.java` | 23 |
+| `db/Core.java` | 2, 3, 6, 15, 16, 19 (`count()`), 9 (`materialize()`), observers/hooks de deleção, `unobserve*`, `findIdField` |
+| `db/Shell.java` | 4 (`upgradeToCompositeKey()`), 7, 8, 11, 12, 13, 14, export/import completos |
+| `db/Query.java` | 9, 10, 24, 25, `count`/`exists`/`delete`/`fieldNotEquals`/`fieldGreaterOrEqual`/`fieldLessOrEqual` |
+| `Caskara.java` | 1, 19, 20, 21, `globalStats()`, `getId` com herança |
+| `db/Pearl.java` | timeout configurável, flag de interrupção |
+| `db/Stats.java` | `merge()`, `getQueryTotalTimeNs()` |
+| `db/BackupManager.java` | rotação de backups, escape do caminho |
+| `commands/CaskaraAdminLogic.java` | 14, 23, `deleteEntity` com tipo, `dumpEntity` multi-linha, rótulo `Disk` |
+| `ui/CaskaraAdminPage.java` | 23, chamada de `deleteEntity`, rótulo `Disk` |
 | `MainPlugin.java` | 22 |
 | `utils/CaskaraLogger.java` | 26 |
+| `build.gradle`, `.gitignore` | deploy opt-in, higiene do repositório |
 | `README.md`, `DOCS.md`, `CURSEFORGE.md` | 17 |

@@ -311,6 +311,11 @@ Core<PlayerProfile> core = Caskara.core(PlayerProfile.class);
 | `extract(String id)`                                                  | Loads by ID, returns `Pearl<T>`.                                       |
 | `extractAll()`                                                        | Returns `List<T>` of all active, non-expired, non-deleted records.     |
 | `count()`                                                             | Counts active records without deserialising or decrypting them.        |
+| `onAfterDelete(Consumer<String>)`                                     | Hook fired after `discard()` / `softDelete()`.                         |
+| `unobserve(String id, BiConsumer)`                                    | Removes one observer registered for that id.                           |
+| `unobserveAll(String id)`                                             | Removes every observer for that id (call it when a player leaves).     |
+| `unobserveAll(BiConsumer)`                                            | Removes an observer registered via `observeAll`.                       |
+| `getObservedIdCount()`                                                | How many ids currently hold observers — useful to spot leaks.          |
 | `discard(String id)`                                                  | Physically deletes the record.                                         |
 | `softDelete(String id)`                                               | Sets `deleted_at` timestamp; record is hidden from queries.            |
 | `restore(String id)`                                                  | Clears `deleted_at`; record becomes visible again.                     |
@@ -345,6 +350,9 @@ List<PlayerProfile> results = Caskara.query(PlayerProfile.class)
 | `field(String name, Object value)`            | Exact match: `json_extract(json, '$.name') = value`.      |
 | `fieldGreaterThan(String name, Object value)` | Greater-than comparison on a JSON field.                  |
 | `fieldLessThan(String name, Object value)`    | Less-than comparison on a JSON field.                     |
+| `fieldGreaterOrEqual(String name, Object v)`  | `>=` comparison on a JSON field.                          |
+| `fieldLessOrEqual(String name, Object v)`     | `<=` comparison on a JSON field.                          |
+| `fieldNotEquals(String name, Object value)`   | Differs from value. Records missing the field don't match.|
 | `fieldIn(String name, List<Object> values)`   | Matches any value in the list (SQL `IN`).                 |
 | `fieldContains(String name, String text)`     | SQL `LIKE '%text%'` on a JSON string field.               |
 | `orderBy(String field, Order direction)`      | Sort by a JSON field. Use `Query.Order.ASC` or `DESC`.    |
@@ -354,6 +362,9 @@ List<PlayerProfile> results = Caskara.query(PlayerProfile.class)
 | `fetch()`                                     | Executes and returns `List<T>` (blocking).                |
 | `fetchAsync()`                                | Non-blocking; returns `CompletableFuture<List<T>>`.       |
 | `fetchFirst()`                                | Returns `Pearl<T>` with the first result.                 |
+| `count()`                                     | Counts matches without deserialising. Ignores limit/offset. |
+| `exists()`                                    | True if at least one record matches.                      |
+| `delete()`                                    | Deletes every match; returns how many were removed.       |
 | `search(String text)`                         | SQLite FTS5 instant text match across the entire JSON.    |
 
 ### Ultra-Fast Full-Text Search (FTS5)
