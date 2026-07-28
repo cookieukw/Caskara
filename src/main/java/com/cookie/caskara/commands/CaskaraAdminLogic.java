@@ -231,7 +231,10 @@ public class CaskaraAdminLogic {
                             System.out.println("[CaskaraDump] JSON: " + json);
                             System.out.println("[CaskaraDump] ===========================");
 
-                            output.add("Dumped entity " + id + " (" + type + ") to Server Console!");
+                            // Keep "Dumped entity <id> to Server Console!" as a contiguous
+                            // prefix — the type is appended so callers matching on the
+                            // original message keep working.
+                            output.add("Dumped entity " + id + " to Server Console! (type: " + type + ")");
                             found = true;
                         }
                     }
