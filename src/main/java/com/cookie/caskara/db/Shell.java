@@ -1,6 +1,7 @@
 package com.cookie.caskara.db;
 
 import com.cookie.caskara.exceptions.DatabaseException;
+import com.cookie.caskara.utils.CaskaraLogger;
 import com.google.gson.Gson;
 import java.io.File;
 import java.sql.Connection;
@@ -81,21 +82,26 @@ public class Shell {
                 // keep the FTS5 index in sync. Without it the index accumulates stale rows.
                 stmt.execute("PRAGMA recursive_triggers = ON");
                 
+                // Fresh databases get the composite key straight away. Existing ones are
+                // upgraded by upgradeToCompositeKey() below.
                 stmt.execute("CREATE TABLE IF NOT EXISTS elements (" +
-                        "id TEXT PRIMARY KEY," +
-                        "type TEXT," +
+                        "id TEXT NOT NULL," +
+                        "type TEXT NOT NULL," +
                         "json TEXT," +
                         "expires_at INTEGER," +
                         "deleted_at INTEGER," +
-                        "version INTEGER DEFAULT 1" + // Schema migration support
+                        "version INTEGER DEFAULT 1," + // Schema migration support
+                        "PRIMARY KEY (id, type)" +
                         ")");
                 stmt.execute("CREATE INDEX IF NOT EXISTS idx_type ON elements(type)");
-                
+
             // Migrations for existing databases
                 try { stmt.execute("ALTER TABLE elements ADD COLUMN expires_at INTEGER"); } catch (SQLException ignored) {}
                 try { stmt.execute("ALTER TABLE elements ADD COLUMN deleted_at INTEGER"); } catch (SQLException ignored) {}
                 try { stmt.execute("ALTER TABLE elements ADD COLUMN version INTEGER DEFAULT 1"); } catch (SQLException ignored) {}
             }
+
+            upgradeToCompositeKey();
             
             if (asyncWriterThread == null) {
                 asyncWriterThread = new Thread(() -> {
@@ -127,6 +133,143 @@ public class Shell {
         } finally {
             lock.unlock();
         }
+    }
+
+    /**
+     * Caskara's own on-disk schema version, tracked via {@code PRAGMA user_version}.
+     * <p>
+     * 0 = legacy layout, {@code id TEXT PRIMARY KEY}<br>
+     * 1 = {@code PRIMARY KEY (id, type)}
+     */
+    private static final int SCHEMA_VERSION_COMPOSITE_KEY = 1;
+
+    /**
+     * Rebuilds the {@code elements} table with a composite primary key.
+     * <p>
+     * The original schema declared {@code id TEXT PRIMARY KEY} while keeping {@code type}
+     * as an ordinary column. Since every write is an {@code INSERT OR REPLACE}, saving two
+     * different entity types under the same id (a player name or UUID, say) silently
+     * destroyed the first record: the row was replaced, and every read filters on
+     * {@code id AND type}, so the old entity simply disappeared.
+     * <p>
+     * Runs once per database file, inside a transaction, after taking a consistent
+     * snapshot of the file. If anything fails the transaction is rolled back and the
+     * database is left exactly as it was.
+     * <p>
+     * Note: indexes created at runtime through {@link Core#createIndex(String)} live on the
+     * old table and are dropped with it. Indexes declared via {@code @Index} are recreated
+     * automatically the next time the Core is built; purely programmatic ones must be
+     * re-issued by the caller.
+     */
+    private void upgradeToCompositeKey() throws SQLException {
+        Connection conn = connection;
+
+        int userVersion;
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("PRAGMA user_version")) {
+            userVersion = rs.next() ? rs.getInt(1) : 0;
+        }
+        if (userVersion >= SCHEMA_VERSION_COMPOSITE_KEY) {
+            return;
+        }
+
+        // A freshly created file already has the right shape — just stamp the version.
+        if (hasCompositePrimaryKey(conn)) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("PRAGMA user_version = " + SCHEMA_VERSION_COMPOSITE_KEY);
+            }
+            return;
+        }
+
+        CaskaraLogger.warn("Caskara: upgrading '" + shellFile.getName()
+                + "' to a composite primary key (id, type). Taking a snapshot first...");
+
+        File snapshot = new File(shellFile.getParentFile(), shellFile.getName() + ".pre-composite-key.bak");
+        try (Statement stmt = conn.createStatement()) {
+            // VACUUM INTO writes a consistent copy without needing the file to be closed.
+            if (snapshot.exists() && !snapshot.delete()) {
+                throw new DatabaseException("Cannot overwrite stale migration snapshot: " + snapshot.getAbsolutePath());
+            }
+            stmt.execute("VACUUM INTO '" + snapshot.getAbsolutePath().replace("'", "''") + "'");
+        } catch (SQLException e) {
+            throw new DatabaseException("Aborting composite-key upgrade for " + shellFile.getName()
+                    + ": could not create a safety snapshot. The database was not modified.", e);
+        }
+
+        boolean previousAutoCommit = conn.getAutoCommit();
+        conn.setAutoCommit(false);
+        try (Statement stmt = conn.createStatement()) {
+            // The FTS triggers belong to the old table and would be dropped with it; the
+            // shadow index would then hold rows keyed by rowids that no longer exist.
+            // Drop both so Core.initializeFts() rebuilds them cleanly on next use.
+            dropFtsArtifacts(stmt);
+
+            stmt.execute("CREATE TABLE elements_migrated (" +
+                    "id TEXT NOT NULL," +
+                    "type TEXT NOT NULL," +
+                    "json TEXT," +
+                    "expires_at INTEGER," +
+                    "deleted_at INTEGER," +
+                    "version INTEGER DEFAULT 1," +
+                    "PRIMARY KEY (id, type)" +
+                    ")");
+
+            // The old PK guaranteed ids were unique, so no (id, type) pair can collide here.
+            // Rows with a NULL type predate the type column and would violate NOT NULL.
+            stmt.execute("INSERT INTO elements_migrated (id, type, json, expires_at, deleted_at, version) " +
+                    "SELECT id, COALESCE(type, ''), json, expires_at, deleted_at, COALESCE(version, 1) " +
+                    "FROM elements WHERE id IS NOT NULL");
+
+            stmt.execute("DROP TABLE elements");
+            stmt.execute("ALTER TABLE elements_migrated RENAME TO elements");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_type ON elements(type)");
+            stmt.execute("PRAGMA user_version = " + SCHEMA_VERSION_COMPOSITE_KEY);
+
+            conn.commit();
+            CaskaraLogger.info("Caskara: '" + shellFile.getName()
+                    + "' upgraded to composite primary key. Snapshot kept at " + snapshot.getName());
+        } catch (SQLException e) {
+            try {
+                conn.rollback();
+            } catch (SQLException rollbackEx) {
+                CaskaraLogger.error("Rollback of the composite-key upgrade failed", rollbackEx);
+            }
+            throw new DatabaseException("Composite-key upgrade failed for " + shellFile.getName()
+                    + ". The database was rolled back; a snapshot is available at " + snapshot.getAbsolutePath(), e);
+        } finally {
+            conn.setAutoCommit(previousAutoCommit);
+        }
+    }
+
+    /** True when {@code elements} already declares both id and type as primary key columns. */
+    private boolean hasCompositePrimaryKey(Connection conn) throws SQLException {
+        int pkColumns = 0;
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("PRAGMA table_info(elements)")) {
+            while (rs.next()) {
+                if (rs.getInt("pk") > 0) {
+                    pkColumns++;
+                }
+            }
+        }
+        return pkColumns >= 2;
+    }
+
+    /** Removes the FTS5 shadow table and every per-type trigger attached to {@code elements}. */
+    private void dropFtsArtifacts(Statement stmt) throws SQLException {
+        List<String> triggers = new ArrayList<>();
+        try (ResultSet rs = stmt.executeQuery(
+                // '_' is a LIKE wildcard, so it must be escaped to match the literal
+                // trigger names Core.initializeFts() creates (fts_ai_/fts_ad_/fts_au_).
+                "SELECT name FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'fts\\_a%' ESCAPE '\\'")) {
+            while (rs.next()) {
+                triggers.add(rs.getString("name"));
+            }
+        }
+        for (String trigger : triggers) {
+            stmt.execute("DROP TRIGGER IF EXISTS \"" + trigger.replace("\"", "\"\"") + "\"");
+        }
+        stmt.execute("DROP TABLE IF EXISTS fts_elements");
     }
 
     public Connection getConnection() {
