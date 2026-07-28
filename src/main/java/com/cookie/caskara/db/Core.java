@@ -635,7 +635,9 @@ public class Core<T> {
                 try {
                     String sql = "UPDATE elements SET json = ?, version = ? WHERE id = ? AND type = ?";
                     try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
-                        pstmt.setString(1, finalJson);
+                        // Must be re-encrypted: writing finalJson raw would silently
+                        // store plaintext for @Encrypted entities.
+                        pstmt.setString(1, encrypt(finalJson));
                         pstmt.setInt(2, newVersion);
                         pstmt.setString(3, id);
                         pstmt.setString(4, typeName);
@@ -742,6 +744,14 @@ public class Core<T> {
                 // Fail silently for reflection sync
             }
         }
+    }
+
+    /**
+     * Materialises a row read by {@link Query} so that query results go through the
+     * same decryption, migration and @Id synchronisation path as {@link #extract(String)}.
+     */
+    T materialize(String id, String json, int dbVersion, Long expiresAt) {
+        return applyMigrations(id, json, dbVersion, expiresAt);
     }
 
     /**
