@@ -55,6 +55,9 @@ import com.cookie.caskara.utils.CaskaraLogger;
  */
 public class Core<T> {
     private static final Gson GSON = new GsonBuilder().serializeNulls().create();
+    /** Identifiers safe to interpolate into DDL (see {@link #createIndex(String)}). */
+    private static final java.util.regex.Pattern JSON_FIELD_PATTERN =
+            java.util.regex.Pattern.compile("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*");
     private final Shell shell;
     private final Class<T> clazz;
     private final String typeName;
@@ -483,6 +486,12 @@ public class Core<T> {
      * Creates an index on a JSON field for faster queries.
      */
     public void createIndex(String jsonField) {
+        // jsonField is interpolated into DDL (SQLite cannot bind identifiers or JSON
+        // paths in CREATE INDEX), so it must be validated instead of trusted.
+        if (jsonField == null || !JSON_FIELD_PATTERN.matcher(jsonField).matches()) {
+            throw new ValidationException("Invalid index field name: '" + jsonField
+                    + "'. Only letters, digits, '_' and '.' are allowed.");
+        }
         shell.runInLock(() -> {
             String indexName = "idx_" + typeName + "_" + jsonField.replace(".", "_");
             String sql = "CREATE INDEX IF NOT EXISTS " + indexName + 
