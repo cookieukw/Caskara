@@ -3,6 +3,7 @@ package com.cookie.caskara.commands;
 import com.cookie.caskara.Caskara;
 import com.cookie.caskara.db.BackupManager;
 import com.cookie.caskara.db.Shell;
+import com.cookie.caskara.utils.CaskaraLogger;
 
 import java.io.File;
 import java.sql.Connection;
@@ -138,15 +139,23 @@ public class CaskaraAdminLogic {
             }
         }
         if (targetShell == null) return false;
-        try {
-            try (PreparedStatement pstmt = targetShell.getConnection().prepareStatement("DELETE FROM elements WHERE id = ?")) {
+        final Shell shell = targetShell;
+        // Runs under the shell lock so it cannot race with writers, and invalidates the
+        // Core LRU caches afterwards — otherwise extract() would keep serving the
+        // deleted entity from memory.
+        return shell.runInLock(() -> {
+            try (PreparedStatement pstmt = shell.getConnection().prepareStatement("DELETE FROM elements WHERE id = ?")) {
                 pstmt.setString(1, id);
-                return pstmt.executeUpdate() > 0;
+                boolean deleted = pstmt.executeUpdate() > 0;
+                if (deleted) {
+                    shell.invalidateCaches();
+                }
+                return deleted;
+            } catch (Exception e) {
+                CaskaraLogger.error("Failed to delete entity " + id + " from " + shellName, e);
+                return false;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
+        });
     }
 
     public static List<String> runVacuum() {
