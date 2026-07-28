@@ -11,7 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -34,6 +34,8 @@ import java.nio.file.Files;
  */
 public class Shell {
     private static final Gson GSON = new Gson();
+    /** serializeNulls so an absent TTL round-trips as an explicit null instead of vanishing. */
+    private static final Gson EXPORT_GSON = new com.google.gson.GsonBuilder().serializeNulls().create();
     private final File shellFile;
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final ReentrantLock lock = new ReentrantLock();
@@ -420,18 +422,31 @@ public class Shell {
     public void exportToJson(File file) {
         runInLock(() -> {
             try {
-                List<Map<String, String>> data = new ArrayList<>();
+                List<Map<String, Object>> data = new ArrayList<>();
+                // Previously only id/type/json were exported, so a round-trip silently
+                // dropped every TTL, resurrected soft-deleted records and reset the
+                // schema version. All six columns are carried now.
                 try (Statement stmt = getConnection().createStatement();
-                     ResultSet rs = stmt.executeQuery("SELECT * FROM elements")) {
+                     ResultSet rs = stmt.executeQuery(
+                             "SELECT id, type, json, expires_at, deleted_at, version FROM elements")) {
                     while (rs.next()) {
-                        Map<String, String> row = new HashMap<>();
+                        Map<String, Object> row = new LinkedHashMap<>();
                         row.put("id", rs.getString("id"));
                         row.put("type", rs.getString("type"));
                         row.put("json", rs.getString("json"));
+
+                        long expiresAt = rs.getLong("expires_at");
+                        row.put("expires_at", rs.wasNull() ? null : expiresAt);
+                        long deletedAt = rs.getLong("deleted_at");
+                        row.put("deleted_at", rs.wasNull() ? null : deletedAt);
+                        int version = rs.getInt("version");
+                        row.put("version", rs.wasNull() ? 1 : version);
+
                         data.add(row);
                     }
                 }
-                String fullJson = GSON.toJson(data);
+                // serializeNulls so absent TTLs survive as explicit nulls
+                String fullJson = EXPORT_GSON.toJson(data);
                 Files.writeString(file.toPath(), fullJson);
             } catch (Exception e) {
                 throw new DatabaseException("Failed to export shell to JSON", e);
@@ -443,31 +458,60 @@ public class Shell {
     /**
      * Imports data from a JSON file into this shell.
      */
-    @SuppressWarnings("unchecked")
     public void importFromJson(File file) {
         runInLock(() -> {
             try {
                 String content = Files.readString(file.toPath());
-                List<Map<String, String>> data = GSON.fromJson(content, List.class);
+                // Typed token instead of the old raw List.class: Gson hands back
+                // Map<String,Object> (numbers as Double), so the previous unchecked cast
+                // to Map<String,String> blew up as soon as a numeric column was present.
+                java.lang.reflect.Type rowType =
+                        new com.google.gson.reflect.TypeToken<List<Map<String, Object>>>() {}.getType();
+                List<Map<String, Object>> data = GSON.fromJson(content, rowType);
+                if (data == null) {
+                    return null;
+                }
 
-                // Insert with version=1 so that migrations can be applied on next read
-                String sql = "INSERT OR REPLACE INTO elements (id, type, json, version) VALUES (?, ?, ?, 1)";
+                String sql = "INSERT OR REPLACE INTO elements " +
+                        "(id, type, json, expires_at, deleted_at, version) VALUES (?, ?, ?, ?, ?, ?)";
                 try (PreparedStatement pstmt = getConnection().prepareStatement(sql)) {
-                    for (Map<String, String> row : data) {
-                        String id = row.get("id");
+                    for (Map<String, Object> row : data) {
+                        if (row == null) continue;
+                        Object id = row.get("id");
                         if (id == null) continue; // id and type are NOT NULL in the schema
-                        pstmt.setString(1, id);
-                        pstmt.setString(2, row.get("type") == null ? "" : row.get("type"));
-                        pstmt.setString(3, row.get("json"));
+
+                        pstmt.setString(1, id.toString());
+                        Object type = row.get("type");
+                        pstmt.setString(2, type == null ? "" : type.toString());
+                        Object json = row.get("json");
+                        pstmt.setString(3, json == null ? null : json.toString());
+
+                        setNullableLong(pstmt, 4, row.get("expires_at"));
+                        setNullableLong(pstmt, 5, row.get("deleted_at"));
+
+                        Object version = row.get("version");
+                        pstmt.setInt(6, version instanceof Number ? ((Number) version).intValue() : 1);
+
                         pstmt.addBatch();
                     }
                     pstmt.executeBatch();
                 }
+                // Imported rows bypass the Cores entirely, so any cached object is stale.
+                clearAllCaches();
             } catch (Exception e) {
                 throw new DatabaseException("Failed to import shell from JSON", e);
             }
             return null;
         });
+    }
+
+    /** Binds an epoch-millis column, tolerating Gson's Double representation and nulls. */
+    private static void setNullableLong(PreparedStatement pstmt, int index, Object value) throws SQLException {
+        if (value instanceof Number) {
+            pstmt.setLong(index, ((Number) value).longValue());
+        } else {
+            pstmt.setNull(index, java.sql.Types.INTEGER);
+        }
     }
 
     private void startCleanupTask() {
