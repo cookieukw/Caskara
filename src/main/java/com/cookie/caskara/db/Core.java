@@ -417,27 +417,39 @@ public class Core<T> {
         }
         shell.getStats().recordCacheMiss();
 
-        CompletableFuture<T> future = CompletableFuture.supplyAsync(() -> shell.runInLock(() -> {
-            String sql = "SELECT json, version, expires_at FROM elements WHERE id = ? AND type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)";
-            try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
-                pstmt.setString(1, id);
-                pstmt.setString(2, typeName);
-                pstmt.setLong(3, System.currentTimeMillis());
-                try (ResultSet rs = pstmt.executeQuery()) {
-                    if (rs.next()) {
-                        String json = rs.getString("json");
-                        int dbVersion = rs.getInt("version");
-                        long exp = rs.getLong("expires_at");
-                        Long expiresAt = rs.wasNull() ? null : exp;
-                        return applyMigrations(id, json, dbVersion, expiresAt);
-                    }
-                }
-            } catch (SQLException e) {
-                throw new DatabaseException("Failed to extract element from Core: " + id, e);
-            }
-            return null;
-        }), shell.getExecutor());
+        // If the caller already owns the shell lock (inside transaction()/runInLock),
+        // handing the read to another thread would block on a lock this thread holds
+        // and deadlock until Pearl.sync() times out. Read inline in that case.
+        if (shell.isLockHeldByCurrentThread() || shell.getExecutor().isShutdown()) {
+            T value = shell.runInLock(() -> readFromDb(id));
+            return new Pearl<>(value);
+        }
+
+        CompletableFuture<T> future =
+                CompletableFuture.supplyAsync(() -> shell.runInLock(() -> readFromDb(id)), shell.getExecutor());
         return new Pearl<>(future);
+    }
+
+    /** Reads a single row and materialises it. Must be called while holding the shell lock. */
+    private T readFromDb(String id) {
+        String sql = "SELECT json, version, expires_at FROM elements WHERE id = ? AND type = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > ?)";
+        try (PreparedStatement pstmt = shell.getConnection().prepareStatement(sql)) {
+            pstmt.setString(1, id);
+            pstmt.setString(2, typeName);
+            pstmt.setLong(3, System.currentTimeMillis());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    String json = rs.getString("json");
+                    int dbVersion = rs.getInt("version");
+                    long exp = rs.getLong("expires_at");
+                    Long expiresAt = rs.wasNull() ? null : exp;
+                    return applyMigrations(id, json, dbVersion, expiresAt);
+                }
+            }
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to extract element from Core: " + id, e);
+        }
+        return null;
     }
 
     /**
