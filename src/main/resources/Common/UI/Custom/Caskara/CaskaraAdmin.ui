@@ -196,7 +196,7 @@ Style: (TextColor: #222222, RenderBold: true, HorizontalAlignment: Center, Verti
 Group #Toolbar {
 Anchor: (Height: 35, Bottom: 15);
 LayoutMode: Left;
-TextInput #SearchInput {
+TextField #SearchInput {
 Anchor: (Width: 300, Right: 15);
 Background: #181818;
 }

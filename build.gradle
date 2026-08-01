@@ -64,7 +64,7 @@ tasks.named('test') {
 tasks.register('deploy', Copy) {
     dependsOn 'shadowJar'
     from tasks.shadowJar.archiveFile
-    into "${hytaleHome}/UserData/Mods"
+    into "${hytaleHome}/Mods"
     
     
     doFirst {
