@@ -1,5 +1,10 @@
 # Caskara Changelog
 
+## [3.0.4] - Hytale Pre-release Compatibility
+
+* Extended the declared Hytale `0.5.x`–`0.9.x` compatibility range to include pre-release builds.
+* Verified the manifest range accepts Hytale `0.8.0-pre.2.1` and rejects `0.10.0`.
+
 ## [3.0.3] - Build and UI Compatibility Fix
 
 * Updated the Gradle Wrapper to 9.9.0 for Java 25 support and upgraded the Shadow plugin.
