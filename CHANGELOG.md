@@ -1,5 +1,17 @@
 # Caskara Changelog
 
+## [3.0.3] - Build and UI Compatibility Fix
+
+* Updated the Gradle Wrapper to 9.9.0 for Java 25 support and upgraded the Shadow plugin.
+* Removed the experimental Hytale admin UI and `/caskara ui` command.
+* Disabled asset-pack registration because Caskara no longer ships custom UI assets.
+
+## [3.0.2] - Hytale Compatibility Update
+
+* Bumped Caskara to `3.0.2`.
+* Declared Hytale server compatibility from `0.5.0` through `0.9.x`.
+* Compiled against the Hytale `0.7.6` server API; later versions in the declared range are not yet runtime-tested.
+
 ## [2.0.0] - The Hardening Update
 
 ### ✨ Features

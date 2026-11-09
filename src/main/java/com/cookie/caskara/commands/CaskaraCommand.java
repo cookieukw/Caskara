@@ -4,14 +4,12 @@ package com.cookie.caskara.commands;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 import java.util.List;
-import java.util.Collections;
 
 public class CaskaraCommand extends AbstractCommand {
 
@@ -25,12 +23,11 @@ public class CaskaraCommand extends AbstractCommand {
         this.addSubCommand(new AutoBackupCommand());
         this.addSubCommand(new DumpCommand());
         this.addSubCommand(new ScanCommand());
-        this.addSubCommand(new UICommand());
     }
 
     @Override
     protected CompletableFuture<Void> execute(@Nonnull CommandContext ctx) {
-        ctx.sendMessage(Message.raw("Caskara Commands: /caskara <ui|stats|vacuum|backup|autobackup|dump|scan>"));
+        ctx.sendMessage(Message.raw("Caskara Commands: /caskara <stats|vacuum|backup|autobackup|dump|scan>"));
         return CompletableFuture.completedFuture(null);
     }
 
@@ -102,17 +99,4 @@ public class CaskaraCommand extends AbstractCommand {
         }
     }
 
-    public static class UICommand extends com.hypixel.hytale.server.core.command.system.basecommands.AbstractWorldCommand {
-        public UICommand() { super("ui", "Open Caskara Admin UI"); }
-        @Override protected void execute(@Nonnull CommandContext ctx, com.hypixel.hytale.server.core.universe.world.World world, com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store) {
-            com.hypixel.hytale.server.core.universe.PlayerRef playerRef = ctx.senderAs(com.hypixel.hytale.server.core.universe.PlayerRef.class);
-            if (playerRef != null) {
-                world.execute(() -> {
-                    com.cookie.caskara.ui.CaskaraAdminPage.open(playerRef);
-                });
-            } else {
-                ctx.sendMessage(Message.raw("This command must be executed by a player."));
-            }
-        }
-    }
 }
