@@ -106,10 +106,10 @@ shadowJar {
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
     mergeServiceFiles()
 }
-// Deploy is opt-in: `./gradlew shadowJar -Pdeploy`, or just `./gradlew deploy`.
+// Deploy is opt-in: `./gradlew shadowJar -Pdeploy=true`, or just `./gradlew deploy`.
 // It used to run after EVERY build, copying the jar into a local Hytale install —
 // that breaks CI and any machine that doesn't have one.
-if (project.hasProperty('deploy')) {
+if (providers.gradleProperty('deploy').map { it.toBoolean() }.getOrElse(false)) {
     tasks.shadowJar.finalizedBy('deploy')
 }
 

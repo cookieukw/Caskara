@@ -29,4 +29,10 @@ public class MainPlugin extends JavaPlugin {
 
         CaskaraLogger.info("Caskara data engine initialized (data folder: " + folder.getAbsolutePath() + ")");
     }
+
+    @Override
+    protected void shutdown() {
+        Caskara.shutdown();
+        CaskaraLogger.info("Caskara data engine shut down.");
+    }
 }
